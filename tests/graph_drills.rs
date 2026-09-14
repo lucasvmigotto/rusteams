@@ -324,3 +324,65 @@ async fn drill_mention_maps_to_at_name_and_mention() {
     assert_eq!(msgs[0].mentions[0].display_name, "Alice");
     assert_eq!(msgs[0].mentions[0].user_id.as_deref(), Some("user-1"));
 }
+
+#[tokio::test]
+async fn drill_incremental_poll_uses_filter_and_top() {
+    use wiremock::matchers::{method, path_regex, query_param};
+    use chrono::{TimeZone, Utc};
+
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path_regex(r"/me/chats/c1/messages$"))
+        .and(query_param("$top", "25"))
+        .and(query_param("$filter", "lastModifiedDateTime gt 2026-09-14T10:00:00+00:00"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "value": [graph_message("m2", "fresh")]
+        })))
+        .mount(&server)
+        .await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    let since = Utc.timestamp_opt(1_789_380_000, 0).unwrap();
+    let msgs =
+        client.list_messages_since("c1", since, 25).await.expect("drill: incremental works");
+    assert_eq!(msgs.len(), 1);
+    assert_eq!(msgs[0].id, "m2");
+}
+
+#[tokio::test]
+async fn drill_preview_hydrates_chat_list() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "value": [{
+                "id": "chat-1",
+                "topic": "Engineering",
+                "lastMessagePreview": {
+                    "createdDateTime": "2026-09-14T10:05:00Z",
+                    "body": { "content": "latest news" }
+                }
+            }]
+        })))
+        .mount(&server)
+        .await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    let chats = client.list_chats().await.expect("drill: preview list works");
+    assert_eq!(chats.len(), 1);
+    assert_eq!(chats[0].last_message_preview.as_deref(), Some("latest news"));
+    assert!(chats[0].last_message_at.is_some(), "preview timestamp mapped");
+}
+
+#[tokio::test]
+async fn drill_single_message_hydrates_search_hit() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(graph_message("m9", "full body")))
+        .mount(&server)
+        .await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    let msg = client.get_message("chat-1", "m9").await.expect("drill: hydrate works");
+    assert_eq!(msg.body, "full body");
+    assert_eq!(msg.chat_id, "chat-1");
+}
