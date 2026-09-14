@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::traits::{ChatProvider, PresenceProvider};
-use crate::domain::{Chat, ChatMessage};
+use crate::domain::{Chat, ChatMessage, Reaction};
 use crate::error::AppError;
 use async_trait::async_trait;
 use chrono::Utc;
@@ -88,6 +88,73 @@ impl ChatProvider for MockTeamsProvider {
         };
         self.messages.lock().unwrap().entry(chat_id.into()).or_default().push(m.clone());
         Ok(m)
+    }
+
+    async fn update_message(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        body: &str,
+    ) -> Result<ChatMessage, AppError> {
+        let mut guard = self.messages.lock().unwrap();
+        let msgs = guard.entry(chat_id.into()).or_default();
+        let m = msgs
+            .iter_mut()
+            .find(|m| m.id == message_id)
+            .ok_or_else(|| AppError::Provider("message not found".into()))?;
+        m.body = crate::sanitize::sanitize(body);
+        m.modified = Utc::now();
+        Ok(m.clone())
+    }
+
+    async fn delete_message(&self, chat_id: &str, message_id: &str) -> Result<(), AppError> {
+        let mut guard = self.messages.lock().unwrap();
+        let msgs = guard.entry(chat_id.into()).or_default();
+        let before = msgs.len();
+        msgs.retain(|m| m.id != message_id);
+        if msgs.len() == before {
+            return Err(AppError::Provider("message not found".into()));
+        }
+        Ok(())
+    }
+
+    async fn set_reaction(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        kind: &str,
+    ) -> Result<(), AppError> {
+        let mut guard = self.messages.lock().unwrap();
+        let msgs = guard.entry(chat_id.into()).or_default();
+        let m = msgs
+            .iter_mut()
+            .find(|m| m.id == message_id)
+            .ok_or_else(|| AppError::Provider("message not found".into()))?;
+        m.reactions.retain(|r| !(r.kind == kind && r.user_id == "me"));
+        m.reactions.push(Reaction {
+            kind: kind.into(),
+            user_id: "me".into(),
+            display_name: "me".into(),
+        });
+        m.modified = Utc::now();
+        Ok(())
+    }
+
+    async fn unset_reaction(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        kind: &str,
+    ) -> Result<(), AppError> {
+        let mut guard = self.messages.lock().unwrap();
+        let msgs = guard.entry(chat_id.into()).or_default();
+        let m = msgs
+            .iter_mut()
+            .find(|m| m.id == message_id)
+            .ok_or_else(|| AppError::Provider("message not found".into()))?;
+        m.reactions.retain(|r| !(r.kind == kind && r.user_id == "me"));
+        m.modified = Utc::now();
+        Ok(())
     }
 }
 
