@@ -18,6 +18,7 @@ fn sample_view() -> ReadView {
             body: "Hello, Teams!".into(),
         }],
         status: "Ctrl+Q Quit".into(),
+        notice: None,
     }
 }
 
@@ -42,6 +43,7 @@ fn empty_view() -> ReadView {
         selected_chat: None,
         messages: vec![],
         status: "offline".into(),
+        notice: None,
     }
 }
 

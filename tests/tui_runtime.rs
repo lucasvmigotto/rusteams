@@ -44,7 +44,7 @@ fn read_view_assembles_sidebar_selection_and_messages() {
     s.apply(Command::MessageReceived { message: msg("m1", "c1", "Alice", "hi") });
     s.apply(Command::SelectChat { chat_id: "c1".into() });
 
-    let view = build_read_view(&s);
+    let view = build_read_view(&s, None);
     assert_eq!(view.chats.len(), 2);
     assert_eq!(view.selected_chat.as_deref(), Some("c1"));
     assert_eq!(view.messages.len(), 1);
@@ -59,7 +59,7 @@ fn read_view_scopes_messages_to_selected_chat() {
     s.apply(Command::MessageReceived { message: msg("m2", "c2", "B", "two") });
     s.apply(Command::SelectChat { chat_id: "c2".into() });
 
-    let view = build_read_view(&s);
+    let view = build_read_view(&s, None);
     assert_eq!(view.messages.len(), 1);
     assert_eq!(view.messages[0].body, "two");
 }
