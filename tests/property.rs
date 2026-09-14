@@ -29,6 +29,7 @@ fn arb_unique_messages() -> impl Strategy<Value = Vec<ChatMessage>> {
                     reactions: vec![],
                     mentions: vec![],
                     is_read: false,
+                    segments: vec![],
                 }
             })
             .collect()
@@ -49,6 +50,7 @@ fn arb_message() -> impl Strategy<Value = ChatMessage> {
             reactions: vec![],
             mentions: vec![],
             is_read: false,
+            segments: vec![],
         }
     })
 }

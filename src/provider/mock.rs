@@ -85,6 +85,7 @@ impl ChatProvider for MockTeamsProvider {
             reactions: vec![],
             mentions: vec![],
             is_read: true,
+            segments: vec![],
         };
         self.messages.lock().unwrap().entry(chat_id.into()).or_default().push(m.clone());
         Ok(m)
