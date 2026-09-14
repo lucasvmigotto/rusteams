@@ -46,6 +46,8 @@ is SemVer with `MVP ≠ 1.0.0`.
 - Mention send with escaped `<at>` payload; hosted-content listing refs.
 - Mention reads: normalized `Mention`s with approximate offsets, `@Name` body
   rendering.
+- HTML rendering: dependency-free scanner to `RichSegment`s, styled TUI lines
+  (underlined links, bold code) with plain-text fallback.
 - Incremental query: watermark-filtered polls, single-message hydration,
   preview hydration onto chats.
 - Read-only TUI panes with snapshot tests; keyboard map stubbed for composer phase.
