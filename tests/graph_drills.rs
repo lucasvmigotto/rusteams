@@ -94,3 +94,48 @@ async fn drill_rejects_malformed_payload() {
     let err = client.list_chats().await.expect_err("drill: garbage fails");
     assert!(err.to_string().contains("malformed"));
 }
+
+fn graph_message(id: &str, body: &str) -> serde_json::Value {
+    serde_json::json!({
+        "id": id,
+        "createdDateTime": "2026-09-14T10:00:00Z",
+        "lastModifiedDateTime": "2026-09-14T10:00:00Z",
+        "body": { "contentType": "text", "content": body },
+        "from": { "user": { "displayName": "Alice" } }
+    })
+}
+
+#[tokio::test]
+async fn drill_lists_messages_with_sanitized_bodies() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "value": [
+                graph_message("m1", "hello"),
+                graph_message("m2", "\x1b[31mhi\x1b[0m"),
+            ]
+        })))
+        .mount(&server)
+        .await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    let msgs = client.list_messages("chat-1").await.expect("drill: list works");
+    assert_eq!(msgs.len(), 2);
+    assert_eq!(msgs[0].chat_id, "chat-1");
+    assert_eq!(msgs[0].body, "hello");
+    assert_eq!(msgs[1].body, "hi");
+}
+
+#[tokio::test]
+async fn drill_send_returns_created_message() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(graph_message("m9", "sent!")))
+        .mount(&server)
+        .await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    let msg = client.send_message("chat-1", "sent!").await.expect("drill: send works");
+    assert_eq!(msg.id, "m9");
+    assert_eq!(msg.body, "sent!");
+}
