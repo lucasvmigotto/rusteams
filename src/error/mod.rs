@@ -14,6 +14,10 @@ pub enum AppError {
     Security(String),
     #[error("input error: {0}")]
     Validation(String),
+    /// Cooperative shutdown: tasks stop, terminal state is restored.
+    /// Unit struct — nothing secret can ever be attached.
+    #[error("shutting down")]
+    Shutdown,
 }
 
 impl AppError {
@@ -40,6 +44,11 @@ mod tests {
             assert!(!msg.contains("Bearer"), "leak in {msg:?}");
             assert!(!msg.contains("eyJ"), "leak in {msg:?}");
         }
+    }
+
+    #[test]
+    fn shutdown_error_is_a_fixed_message() {
+        assert_eq!(AppError::Shutdown.user_message(), "shutting down");
     }
 
     #[test]
