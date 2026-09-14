@@ -125,12 +125,16 @@ fn map_message(chat_id: &str, dto: MessageDto) -> Result<ChatMessage, AppError> 
         .mentions
         .into_iter()
         .map(|m| {
-            let display_name = m.mention_text.clone().unwrap_or_default();
+            let user = m.mentioned.and_then(|d| d.user);
+            let display_name = m
+                .mention_text
+                .or_else(|| user.as_ref().and_then(|u| u.display_name.clone()))
+                .unwrap_or_default();
             // Best-effort offset: first occurrence of the display name in the
             // rendered body. Graph exposes no offsets; 0 when absent.
             let offset = body.find(&display_name).unwrap_or(0);
             crate::domain::Mention {
-                user_id: m.mentioned.and_then(|d| d.user).and_then(|u| u.id),
+                user_id: user.and_then(|u| u.id),
                 length: display_name.len(),
                 display_name,
                 offset,
