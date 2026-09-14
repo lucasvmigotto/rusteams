@@ -36,8 +36,10 @@ fn msg(id: &str, chat: &str, sender: &str, body: &str) -> ChatMessage {
 
 #[test]
 fn read_view_assembles_sidebar_selection_and_messages() {
-    let mut s = AppState::default();
-    s.chats = vec![chat("c1", "Engineering"), chat("c2", "Unread")];
+    let mut s = AppState {
+        chats: vec![chat("c1", "Engineering"), chat("c2", "Unread")],
+        ..Default::default()
+    };
     s.apply(Command::MessageReceived { message: msg("m1", "c1", "Alice", "hi") });
     s.apply(Command::SelectChat { chat_id: "c1".into() });
 
@@ -51,8 +53,7 @@ fn read_view_assembles_sidebar_selection_and_messages() {
 
 #[test]
 fn read_view_scopes_messages_to_selected_chat() {
-    let mut s = AppState::default();
-    s.chats = vec![chat("c1", "A"), chat("c2", "B")];
+    let mut s = AppState { chats: vec![chat("c1", "A"), chat("c2", "B")], ..Default::default() };
     s.apply(Command::MessageReceived { message: msg("m1", "c1", "A", "one") });
     s.apply(Command::MessageReceived { message: msg("m2", "c2", "B", "two") });
     s.apply(Command::SelectChat { chat_id: "c2".into() });
@@ -64,8 +65,7 @@ fn read_view_scopes_messages_to_selected_chat() {
 
 #[test]
 fn actions_move_selection_and_quit_stops() {
-    let mut s = AppState::default();
-    s.chats = vec![chat("c1", "A"), chat("c2", "B")];
+    let mut s = AppState { chats: vec![chat("c1", "A"), chat("c2", "B")], ..Default::default() };
     assert!(!apply_action(&mut s, KeyAction::NextChat));
     assert_eq!(s.selected_chat.as_deref(), Some("c1"));
     assert!(!apply_action(&mut s, KeyAction::NextChat));
@@ -78,5 +78,5 @@ fn actions_move_selection_and_quit_stops() {
 #[test]
 fn restore_is_best_effort_and_never_panics_headless() {
     // No TTY in CI/containers: must not panic, success is opportunistic.
-    let _ = restore_terminal();
+    restore_terminal();
 }
