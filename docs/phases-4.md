@@ -4,7 +4,7 @@
 
 Send, edit (`PATCH`), soft-delete, quote-reply, reactions, mentions, attachments.
 
-## Delivered (`feat/graph-ops`)
+## Delivered (`feat/graph-ops`, `feat/graph-quote-attach`)
 
 - Provider surface extended with demonstrated need: `update_message`,
   `delete_message`, `set_reaction`, `unset_reaction` (+ contract C7–C9).
@@ -12,11 +12,15 @@ Send, edit (`PATCH`), soft-delete, quote-reply, reactions, mentions, attachments
   dedupe, not-found errors).
 - Adapter: `PATCH` + re-read confirm, `softDelete`, `set/unsetReaction`
   (`204`-tolerant via shared `check_mutation`), all drilled against wiremock.
+- Quote-reply: `reply_with_quote` per the documented `messageIds` +
+  `replyMessage.body.content` schema (`201` → mapped message), drilled.
+- Hosted content groundwork: `get_hosted_content` returns typed bytes with a
+  5 MiB cap against hostile payloads, drilled (`image/png` fixture).
 
 ## Remaining scope
 
-- `replyWithQuote`, mentions attach, hosted-content upload, file attachments
-  via SharePoint/OneDrive handoff (exact flows verified at implementation time)
+- Mentions attach, hosted-content upload, file attachments via
+  SharePoint/OneDrive handoff (exact flows verified at implementation time)
 - Composer UX confirmations, tenant smoke tests, failure UX
 
 ## Non-Goals
