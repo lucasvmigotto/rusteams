@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Rendering takes plain [`ReadView`] data assembled by the caller (app state
-//! + sanitized domain text). It never touches providers or the network, which
+//! and sanitized domain text). It never touches providers or the network, which
 //! keeps every pane testable on [`ratatui::backend::TestBackend`].
 
 use ratatui::{
