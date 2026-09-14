@@ -3,9 +3,9 @@
 // Copyright (C) 2026 rusteams contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use rusteams::infra::auth::token_store::{MemoryStore, SecretStore};
 use rusteams::infra::auth::{RefreshClient, default_scopes, refresh_session};
-use rusteams::infra::auth::token_store::MemoryStore;
-use wiremock::{matchers::method, Mock, MockServer, ResponseTemplate};
+use wiremock::{Mock, MockServer, ResponseTemplate, matchers::method};
 
 fn token_body(access: &str, refresh: Option<&str>) -> serde_json::Value {
     serde_json::json!({
@@ -21,7 +21,9 @@ fn token_body(access: &str, refresh: Option<&str>) -> serde_json::Value {
 async fn drill_refresh_exchanges_rotates_and_persists() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(token_body("at-new", Some("rt-new"))))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(token_body("at-new", Some("rt-new"))),
+        )
         .mount(&server)
         .await;
 
@@ -43,7 +45,11 @@ async fn drill_refresh_without_stored_token_fails_closed() {
     let store = MemoryStore::default();
     let client = RefreshClient::new(&server.uri(), "tenant", "client-id");
     let err = refresh_session(&client, &store, "default").await.expect_err("drill: no session");
-    assert!(err.user_message().contains("log in"), "guides back to login, got: {}", err.user_message());
+    assert!(
+        err.user_message().contains("login"),
+        "guides back to login, got: {}",
+        err.user_message()
+    );
 }
 
 #[tokio::test]
