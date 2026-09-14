@@ -52,6 +52,7 @@ is SemVer with `MVP ≠ 1.0.0`.
 - Bound key-to-command map (Vim + Emacs) with scripted event-loop harness.
 - TUI runtime wiring: terminal acquire/restore lifecycle, `ReadView` assembly,
   action folding, `AppError::Terminal`.
+- Live event loop over crossterm with quit/shutdown handling (TTY-only).
 
 ## [0.1.0] — 2026-09-14 (Phase 0 scaffold)
 

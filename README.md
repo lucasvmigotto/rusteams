@@ -25,6 +25,8 @@
   (`MessageSent` → `MessageConfirmed`) — event-loop keybindings pending
 - Bound keyboard map (`j/k`, Emacs aliases, palette, quit) with scripted-loop
   harness — live terminal feed lands with the runtime loop
+- Live event loop (`run_live`): crossterm feed, action fold, re-render, restore
+  on every exit — needs a real TTY, verified manually
 - Polling sync engine (sweeper, due-tick, reconnect re-baselining,
   chaos-drilled) — near-real-time only; this client never claims push latency
 
