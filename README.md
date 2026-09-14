@@ -26,6 +26,7 @@
   (`MessageSent` → `MessageConfirmed`) — event-loop keybindings pending
 - Compose mode wired (`i`, type, `Enter` submit with rollback, `Esc` abandon)
   through `LiveServices::step`; live TTY feed verified manually
+- Visual-only notifications (bounded queue, unread flags, no bell by policy)
 - Bound keyboard map (`j/k`, Emacs aliases, palette, quit) with scripted-loop
   harness — live terminal feed lands with the runtime loop
 - Live event loop (`run_live`): crossterm feed, action fold, re-render, restore
