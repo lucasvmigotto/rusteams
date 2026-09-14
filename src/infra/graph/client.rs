@@ -230,12 +230,104 @@ impl GraphClient {
             resp.json().await.map_err(|_| AppError::Provider("malformed graph response".into()))?;
         map_message(chat_id, dto)
     }
+
+    /// Search the signed-in user's messages (`POST /search/query`,
+    /// `entityTypes: ["chatMessage"]`). Returns ranked hits; use
+    /// `list_messages`/`chatmessage-get` to hydrate full bodies.
+    pub async fn search_messages(&self, query: &str, size: u8) -> Result<Vec<SearchHit>, AppError> {
+        let url = format!("{}/search/query", self.base);
+        let resp = self
+            .auth(self.http.post(&url))
+            .json(&serde_json::json!({
+                "requests": [{
+                    "entityTypes": ["chatMessage"],
+                    "query": { "queryString": query },
+                    "from": 0,
+                    "size": size,
+                }]
+            }))
+            .send()
+            .await
+            .map_err(|e| AppError::Network(safe_network_message(&e)))?;
+        let status = resp.status().as_u16();
+        if status == 401 {
+            return Err(AppError::Auth("graph rejected credentials".into()));
+        }
+        if !(200..300).contains(&status) {
+            return Err(AppError::Network(format!("graph HTTP {status}")));
+        }
+        let body: SearchResponseDto =
+            resp.json().await.map_err(|_| AppError::Provider("malformed graph response".into()))?;
+        Ok(body
+            .value
+            .into_iter()
+            .flat_map(|v| v.hits_containers)
+            .flat_map(|c| c.hits)
+            .filter_map(|h| {
+                let resource = h.resource?;
+                Some(SearchHit {
+                    message_id: resource.id.or(h.hit_id)?,
+                    chat_id: resource.chat_id,
+                    subject: resource.subject,
+                    summary: crate::sanitize::sanitize(h.summary.as_deref().unwrap_or("")),
+                })
+            })
+            .collect())
+    }
 }
 
 #[derive(Debug, Deserialize)]
 struct PresenceDto {
     #[serde(default)]
     availability: Option<String>,
+}
+
+/// One ranked message-search hit. Summaries are sanitized; absent fields stay absent.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SearchHit {
+    pub message_id: String,
+    pub chat_id: Option<String>,
+    pub subject: Option<String>,
+    pub summary: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct SearchHitDto {
+    #[serde(rename = "hitId", default)]
+    hit_id: Option<String>,
+    #[serde(default)]
+    summary: Option<String>,
+    #[serde(default)]
+    resource: Option<SearchResourceDto>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SearchResourceDto {
+    #[serde(default)]
+    id: Option<String>,
+    #[serde(default)]
+    #[serde(rename = "chatId")]
+    chat_id: Option<String>,
+    #[serde(default)]
+    subject: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct HitsContainerDto {
+    #[serde(default)]
+    hits: Vec<SearchHitDto>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SearchResponseDto {
+    #[serde(default)]
+    value: Vec<SearchValueDto>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SearchValueDto {
+    #[serde(rename = "hitsContainers", default)]
+    hits_containers: Vec<HitsContainerDto>,
 }
 
 #[async_trait]
