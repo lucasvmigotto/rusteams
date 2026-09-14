@@ -12,14 +12,30 @@ use crate::domain::{Chat, ChatMessage};
 /// User or system intent. Carries no secrets and performs no I/O.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
-    SelectChat { chat_id: String },
-    MessagesLoaded { chat_id: String, messages: Vec<ChatMessage> },
-    MessageSent { message: ChatMessage },
-    MessageReceived { message: ChatMessage },
+    SelectChat {
+        chat_id: String,
+    },
+    MessagesLoaded {
+        chat_id: String,
+        messages: Vec<ChatMessage>,
+    },
+    MessageSent {
+        message: ChatMessage,
+    },
+    MessageReceived {
+        message: ChatMessage,
+    },
     /// Server echo for an optimistic send: swap the temp-id message for the
     /// confirmed one, or append when no temp entry exists (e.g. after restart).
-    MessageConfirmed { temp_id: String, message: ChatMessage },
-    SyncDiffApplied { chat_id: String, changed: Vec<ChatMessage>, deleted: Vec<String> },
+    MessageConfirmed {
+        temp_id: String,
+        message: ChatMessage,
+    },
+    SyncDiffApplied {
+        chat_id: String,
+        changed: Vec<ChatMessage>,
+        deleted: Vec<String>,
+    },
     ConnectionEvent(ConnectionEvent),
 }
 
@@ -73,6 +89,21 @@ impl AppState {
                 match self.messages.iter_mut().find(|m| m.id == id) {
                     Some(existing) => {
                         *existing = message;
+                        crate::domain::order_messages(&mut self.messages);
+                        vec![Event::MessageUpserted { id }]
+                    }
+                    None => {
+                        self.messages.push(message);
+                        crate::domain::order_messages(&mut self.messages);
+                        vec![Event::MessageAppended { id }]
+                    }
+                }
+            }
+            Command::MessageConfirmed { temp_id, message } => {
+                let id = message.id.clone();
+                match self.messages.iter_mut().find(|m| m.id == temp_id) {
+                    Some(slot) => {
+                        *slot = message;
                         crate::domain::order_messages(&mut self.messages);
                         vec![Event::MessageUpserted { id }]
                     }
