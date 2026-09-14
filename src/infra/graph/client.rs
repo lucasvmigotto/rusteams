@@ -5,8 +5,9 @@
 //! Phase-0 contract: URL builders + error classification are pure and tested.
 //! Live HTTP calls land in Phase 3 behind `TeamsProvider`.
 
-use crate::domain::Chat;
+use crate::domain::{Chat, ChatMessage};
 use crate::error::AppError;
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 /// Blocking-free Graph HTTP adapter. Bodies and topics are sanitized at the
@@ -30,6 +31,70 @@ struct ChatDto {
     id: String,
     #[serde(default)]
     topic: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ItemBodyDto {
+    #[serde(default)]
+    content: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct FromUserDto {
+    #[serde(default)]
+    #[serde(rename = "displayName")]
+    display_name: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FromDto {
+    #[serde(default)]
+    user: Option<FromUserDto>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MessageDto {
+    id: String,
+    #[serde(rename = "createdDateTime")]
+    created: String,
+    #[serde(rename = "lastModifiedDateTime", default)]
+    modified: Option<String>,
+    #[serde(default)]
+    body: Option<ItemBodyDto>,
+    #[serde(default)]
+    from: Option<FromDto>,
+}
+
+fn parse_time(s: &str) -> Result<DateTime<Utc>, AppError> {
+    DateTime::parse_from_rfc3339(s)
+        .map(|t| t.with_timezone(&Utc))
+        .map_err(|_| AppError::Provider("malformed timestamp".into()))
+}
+
+fn map_message(chat_id: &str, dto: MessageDto) -> Result<ChatMessage, AppError> {
+    let created = parse_time(&dto.created)?;
+    let modified = match dto.modified {
+        Some(s) => parse_time(&s)?,
+        None => created,
+    };
+    let body = dto.body.map(|b| crate::sanitize::sanitize(&b.content)).unwrap_or_default();
+    let sender = dto
+        .from
+        .and_then(|f| f.user)
+        .and_then(|u| u.display_name)
+        .unwrap_or_else(|| "unknown".into());
+    Ok(ChatMessage {
+        id: dto.id,
+        chat_id: chat_id.into(),
+        created,
+        modified,
+        sender,
+        body,
+        reply_to_id: None,
+        reactions: vec![],
+        mentions: vec![],
+        is_read: false,
+    })
 }
 
 impl GraphClient {
@@ -107,6 +172,61 @@ impl GraphClient {
             url = env.next_link;
         }
         Ok(out)
+    }
+
+    /// List messages in a chat (`GET /me/chats/{id}/messages`), following
+    /// `@odata.nextLink` pages like [`GraphClient::list_chats`].
+    pub async fn list_messages(&self, chat_id: &str) -> Result<Vec<ChatMessage>, AppError> {
+        let mut out = Vec::new();
+        let mut url = Some(messages_url(&self.base, chat_id));
+        for _ in 0..20 {
+            let next = match url {
+                Some(u) => u,
+                None => break,
+            };
+            let resp = self.get(&next).await?;
+            let status = resp.status().as_u16();
+            if status == 401 {
+                return Err(AppError::Auth("graph rejected credentials".into()));
+            }
+            if !(200..300).contains(&status) {
+                return Err(AppError::Network(format!("graph HTTP {status}")));
+            }
+            let env: Envelope<MessageDto> = resp
+                .json()
+                .await
+                .map_err(|_| AppError::Provider("malformed graph response".into()))?;
+            for dto in env.value {
+                out.push(map_message(chat_id, dto)?);
+            }
+            url = env.next_link;
+        }
+        crate::domain::order_messages(&mut out);
+        Ok(out)
+    }
+
+    /// Send a message (`POST /me/chats/{id}/messages`). The body is sent as-is;
+    /// the returned message is mapped through the same sanitizing path as reads.
+    pub async fn send_message(&self, chat_id: &str, body: &str) -> Result<ChatMessage, AppError> {
+        let url = messages_url(&self.base, chat_id);
+        let resp = self
+            .auth(self.http.post(&url))
+            .json(&serde_json::json!({
+                "body": { "contentType": "text", "content": body }
+            }))
+            .send()
+            .await
+            .map_err(|e| AppError::Network(safe_network_message(&e)))?;
+        let status = resp.status().as_u16();
+        if status == 401 {
+            return Err(AppError::Auth("graph rejected credentials".into()));
+        }
+        if !(200..300).contains(&status) {
+            return Err(AppError::Network(format!("graph HTTP {status}")));
+        }
+        let dto: MessageDto =
+            resp.json().await.map_err(|_| AppError::Provider("malformed graph response".into()))?;
+        map_message(chat_id, dto)
     }
 }
 
