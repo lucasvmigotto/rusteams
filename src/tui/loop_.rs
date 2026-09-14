@@ -162,7 +162,7 @@ pub async fn run_live<P: ChatProvider>(
                 _ => {}
             }
         }
-        let view = build_read_view(state);
+        let view = build_read_view(state, services.last_error());
         terminal
             .draw(|f| render_read_view(f, &view))
             .map_err(|e| AppError::Terminal(format!("render: {e}")))?;

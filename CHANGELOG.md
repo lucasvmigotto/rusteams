@@ -64,6 +64,7 @@ is SemVer with `MVP ≠ 1.0.0`.
   keyboard map and accessibility notes started.
 - Compose send wiring: `handle_submit` with rollback, `LiveServices` compose
   mode, live event-loop feed.
+- Status error line plus explicit confirm model for destructive actions.
 - Visual-only notification queue (sanitized, TTL, unread flags; bell deferred).
 - Bound key-to-command map (Vim + Emacs) with scripted event-loop harness.
 - TUI runtime wiring: terminal acquire/restore lifecycle, `ReadView` assembly,
