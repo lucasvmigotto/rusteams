@@ -7,7 +7,11 @@ license = "GPL-3.0-or-later"
 repository = "https://github.com/lucasvmigotto/rusteams"
 keywords = ["teams", "tui", "microsoft-graph", "chat", "ratatui"]
 categories = ["command-line-utilities"]
+authors = ["Lucas Vidor Migotto <lvmigotto1@gmail.com>"]
 rust-version = "1.89.0"
+readme = "README.md"
+homepage = "https://rusteams.lucasvmigotto.me"
+license-file = "LICENSE"
 
 [[bin]]
 name = "rusteams"
