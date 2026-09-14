@@ -14,9 +14,9 @@
 - Rich domain (reactions, mentions, threads, presence), pure reducers, connection
   state machine with backoff
 - Terminal-output sanitizer (ANSI/OSC/C0-stripping security boundary)
-- `GraphClient` drills (chat/message listing + send + search, 429 retry, paging,
-  failure modes) against mock servers, bound to the provider traits — no live
-  data yet
+- `GraphClient` drills (chat/message listing + send + search + edit/delete/
+  reactions, 429 retry, paging, failure modes) against mock servers, bound to
+  the provider traits — no live data yet
 - Offline suites: unit + contract + property tests, `MockTeamsProvider`
 - Read-only TUI panes (sidebar, conversation, status bar) with TestBackend
   snapshot tests — not yet wired to live state
