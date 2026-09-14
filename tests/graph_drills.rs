@@ -385,3 +385,39 @@ async fn drill_single_message_hydrates_search_hit() {
     assert_eq!(msg.body, "full body");
     assert_eq!(msg.chat_id, "chat-1");
 }
+
+#[tokio::test]
+async fn drill_send_file_reference_posts_attachment_payload() {
+    use wiremock::matchers::{body_json, method};
+
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(body_json(serde_json::json!({
+            "body": {
+                "contentType": "html",
+                "content": "budget <attachment id=\"aid-1\"></attachment>"
+            },
+            "attachments": [{
+                "id": "aid-1",
+                "contentType": "reference",
+                "contentUrl": "https://example.sharepoint.com/x.docx",
+                "name": "Budget.docx"
+            }]
+        })))
+        .respond_with(ResponseTemplate::new(201).set_body_json(graph_message("m10", "budget")))
+        .mount(&server)
+        .await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    let msg = client
+        .send_file_reference(
+            "chat-1",
+            "budget ",
+            "aid-1",
+            "Budget.docx",
+            "https://example.sharepoint.com/x.docx",
+        )
+        .await
+        .expect("drill: attach works");
+    assert_eq!(msg.id, "m10");
+}

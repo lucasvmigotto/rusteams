@@ -576,6 +576,51 @@ impl GraphClient {
         map_message(chat_id, dto)
     }
 
+    /// Send a file reference (`POST …/messages`, HTML body + reference
+    /// attachment per the documented schema). The file must already live in
+    /// SharePoint/OneDrive: pass the driveItem eTag GUID (webDavUrl flow) or
+    /// any GUID (share-link flow) as `attachment_id`. Uploading bytes is
+    /// OneDrive API territory — explicitly out of scope here.
+    pub async fn send_file_reference(
+        &self,
+        chat_id: &str,
+        text_before: &str,
+        attachment_id: &str,
+        file_name: &str,
+        content_url: &str,
+    ) -> Result<ChatMessage, AppError> {
+        let content = format!(
+            "{}<attachment id=\"{}\"></attachment>",
+            Self::escape_html(text_before),
+            attachment_id
+        );
+        let url = messages_url(&self.base, chat_id);
+        let resp = self
+            .auth(self.http.post(&url))
+            .json(&serde_json::json!({
+                "body": { "contentType": "html", "content": content },
+                "attachments": [{
+                    "id": attachment_id,
+                    "contentType": "reference",
+                    "contentUrl": content_url,
+                    "name": file_name,
+                }]
+            }))
+            .send()
+            .await
+            .map_err(|e| AppError::Network(safe_network_message(&e)))?;
+        let status = resp.status().as_u16();
+        if status == 401 {
+            return Err(AppError::Auth("graph rejected credentials".into()));
+        }
+        if !(200..300).contains(&status) {
+            return Err(AppError::Network(format!("graph HTTP {status}")));
+        }
+        let dto: MessageDto =
+            resp.json().await.map_err(|_| AppError::Provider("malformed graph response".into()))?;
+        map_message(chat_id, dto)
+    }
+
     /// List hosted-content refs for a message (`GET …/hostedContents`).
     /// Returns `(content_id, content_type)` pairs; fetch bytes separately.
     pub async fn list_hosted_contents(
