@@ -49,11 +49,6 @@ fn scripted_stream_drives_commands_until_quit() {
     let cmds = run_scripted("chat-1", &keys);
     assert_eq!(
         cmds,
-        vec![
-            KeyAction::NextChat,
-            KeyAction::NextChat,
-            KeyAction::Open,
-            KeyAction::Quit,
-        ]
+        vec![KeyAction::NextChat, KeyAction::NextChat, KeyAction::Open, KeyAction::Quit,]
     );
 }
