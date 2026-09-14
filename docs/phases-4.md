@@ -4,7 +4,7 @@
 
 Send, edit (`PATCH`), soft-delete, quote-reply, reactions, mentions, attachments.
 
-## Delivered (`feat/graph-ops`, `feat/graph-quote-attach`, `feat/graph-mentions-upload`)
+## Delivered (`feat/graph-ops`, `feat/graph-quote-attach`, `feat/graph-mentions-upload`, `feat/graph-attachments`)
 
 - Provider surface extended with demonstrated need: `update_message`,
   `delete_message`, `set_reaction`, `unset_reaction` (+ contract C7–C9).
@@ -22,9 +22,10 @@ Send, edit (`PATCH`), soft-delete, quote-reply, reactions, mentions, attachments
 
 ## Remaining scope
 
-- Mentions read-mapping (HTML → normalized `Mention`), hosted-content upload,
-  file attachments via SharePoint/OneDrive handoff (exact flows verified at
-  implementation time)
+- File references: `send_file_reference` posts the documented HTML
+  `<attachment>` + reference array (eTag-GUID or share-link flow), drilled
+  with body assertion. Byte upload stays OneDrive API territory — deferred
+  with runbook, needs a live drive.
 - Composer UX confirmations, tenant smoke tests, failure UX
 
 ## Non-Goals
