@@ -16,9 +16,37 @@ pub struct ChatMessage {
     /// Sanitized plain-text body ready for terminal rendering.
     pub body: String,
     pub reply_to_id: Option<String>,
+    /// Reactions attached to this message.
+    #[serde(default)]
+    pub reactions: Vec<Reaction>,
+    /// Mentions referenced by this message.
+    #[serde(default)]
+    pub mentions: Vec<Mention>,
+    /// Whether the signed-in user has read this message.
+    #[serde(default)]
+    pub is_read: bool,
+}
+
+/// A normalized reaction (e.g. like, heart) from one user.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Reaction {
+    pub kind: String,
+    pub user_id: String,
+    pub display_name: String,
+}
+
+/// A normalized @-mention inside a message body.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Mention {
+    pub user_id: Option<String>,
+    pub display_name: String,
+    pub offset: usize,
+    pub length: usize,
 }
 
 /// Sort messages oldest-first; tie-break on id for determinism.
+/// Total and deterministic for inputs with unique ids (the Graph invariant);
+/// resolve duplicates with [`dedupe_messages`] first.
 pub fn order_messages(msgs: &mut [ChatMessage]) {
     msgs.sort_by(|a, b| a.created.cmp(&b.created).then_with(|| a.id.cmp(&b.id)));
 }
@@ -85,6 +113,9 @@ mod tests {
             sender: "alice".into(),
             body: "hi".into(),
             reply_to_id: None,
+            reactions: vec![],
+            mentions: vec![],
+            is_read: false,
         }
     }
 
