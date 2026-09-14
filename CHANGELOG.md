@@ -19,6 +19,8 @@ is SemVer with `MVP ≠ 1.0.0`.
 - Device-code login: `DeviceCodeClient` with slow_down/expiry handling, CLI
   `login` wired to OS-keyring persistence, BYO-app setup guide. Live
   verification pending tenant access.
+- Message adapter: `list_messages`/`send_message` with sanitizing DTO mapping,
+  presence read, provider-trait binding.
 
 ## [0.1.0] — 2026-09-14 (Phase 0 scaffold)
 
