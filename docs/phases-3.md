@@ -1,23 +1,27 @@
-# Phase 3 — Chat Read Experience
-
-Strategic spec.
+# Phase 3 — Chat Read Experience (in progress)
 
 ## Objective
 
 Conversation list, message history, presence, and search over live Graph.
 
-## Scope
+## Delivered so far (`feat/graph-messages`)
 
-- `GET /me/chats?$expand=lastMessagePreview`, `GET …/messages` with internal
-  paging (`$top≤50`, `$filter`, `$orderby`); lazy loading, bounded memory
+- `GraphClient::list_chats` (paged), `list_messages` (paged + ordered),
+  `send_message`, `my_presence` — all DTO-mapped with sanitized bodies/topics.
+- `ChatProvider` + `PresenceProvider` bound to the adapter; trait-object drills green.
+- Retry discipline shared by all endpoints (429/5xx, capped `Retry-After`, 401 fast-fail).
+
+## Remaining scope
+
+- `$filter`/`$orderby`/lazy loading against live data; `lastMessagePreview` hydration
 - HTML→sanitized-text rendering model; mentions/links/code/emoji mapping
-- Presence read; `/search/query` for `chatMessage` + detail hydration
-- wiremock adapter tests for 200/400/401/403/404/429/5xx + malformed JSON
-- Initial read-only TUI panes
+- `/search/query` for `chatMessage` + detail hydration
+- Edit/delete/reactions (moved to Phase 4 with sending)
+- Initial read-only TUI panes (next: `feat/tui-read`)
 
 ## Non-Goals
 
-Sending/editing (Phase 4); push realtime (Phase 5).
+Push realtime (Phase 5).
 
 ## Definition of Done
 
