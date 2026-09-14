@@ -44,6 +44,10 @@ docker exec -w /workspaces/rusteams rusteams cargo test
 docker exec -w /workspaces/rusteams rusteams cargo run -- config
 ```
 
+The interactive TUI runtime is under construction: terminal acquire/restore,
+view assembly, and key folding exist and are tested, but the live event loop
+is not wired yet — `rusteams` without a subcommand still prints guidance.
+
 ## Documentation
 
 - `docs/phases-0.md` … `docs/phases-7.md` — roadmap (Phase 0 detailed, later phases strategic)
