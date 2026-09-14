@@ -23,8 +23,8 @@
   (`MessageSent` → `MessageConfirmed`) — event-loop keybindings pending
 - Bound keyboard map (`j/k`, Emacs aliases, palette, quit) with scripted-loop
   harness — live terminal feed lands with the runtime loop
-- Polling sync engine (`Poller` + watermarks, chaos-drilled) — near-real-time
-  only; this client never claims push latency
+- Polling sync engine (sweeper, due-tick, reconnect re-baselining,
+  chaos-drilled) — near-real-time only; this client never claims push latency
 
 ## What does NOT work yet
 

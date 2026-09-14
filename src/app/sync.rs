@@ -7,8 +7,10 @@
 //! reordering collapse in `diff_sync`/`order_messages`; gaps heal on the next
 //! complete fetch (watermark re-baselining). Honors `Shutdown` fail-fast.
 
+use super::connection::ConnectionEvent;
 use super::reducer::{AppState, Command, Event};
 use super::shutdown::Shutdown;
+use crate::app::app_state::ConnectionState;
 use crate::domain::diff_sync;
 use crate::error::AppError;
 use crate::provider::ChatProvider;
@@ -33,6 +35,12 @@ impl Watermarks {
             Some(t) => t.elapsed() >= interval,
             None => true,
         }
+    }
+
+    /// Forget all watermarks so every chat re-baselines on the next tick.
+    /// Call this on reconnect: gaps heal via complete-fetch diffs.
+    pub fn reset(&mut self) {
+        self.last_poll.clear();
     }
 }
 
@@ -66,6 +74,50 @@ impl<P: ChatProvider> Poller<P> {
         }
         Ok(state.apply(Command::SyncDiffApplied { chat_id: chat_id.into(), changed, deleted }))
     }
+}
+
+/// Sweep the chat list into state. Returns the replace event (single item).
+pub async fn refresh_chats<P: ChatProvider>(
+    state: &mut AppState,
+    provider: &P,
+) -> Result<Vec<Event>, AppError> {
+    let chats = provider.list_chats().await?;
+    Ok(state.apply(Command::ChatsLoaded { chats }))
+}
+
+/// One scheduler tick: poll the selected chat when its watermark is due.
+/// Marks success only — throttled/failed polls stay due for the next tick.
+pub async fn poll_due_chats<P: ChatProvider>(
+    state: &mut AppState,
+    poller: &Poller<P>,
+    marks: &mut Watermarks,
+    interval: Duration,
+) -> Result<Vec<Event>, AppError> {
+    let selected = match state.selected_chat.clone() {
+        Some(id) => id,
+        None => return Ok(vec![]),
+    };
+    if !marks.is_due(&selected, interval) {
+        return Ok(vec![]);
+    }
+    let events = poller.poll_once(state, &selected).await?;
+    marks.mark_synced(&selected);
+    Ok(events)
+}
+
+/// Bind connection events to sync state: drive the reducer, and when the
+/// machine lands on `Reconnecting`, clear watermarks so the next ticks
+/// re-baseline every chat with complete-fetch diffs (gap healing).
+pub fn note_connection(
+    state: &mut AppState,
+    marks: &mut Watermarks,
+    ev: ConnectionEvent,
+) -> Vec<Event> {
+    let events = state.apply(Command::ConnectionEvent(ev));
+    if state.connection == ConnectionState::Reconnecting {
+        marks.reset();
+    }
+    events
 }
 
 #[cfg(test)]
