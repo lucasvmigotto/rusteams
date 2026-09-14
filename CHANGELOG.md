@@ -23,6 +23,7 @@ is SemVer with `MVP ≠ 1.0.0`.
   fail-closed without a session.
 - Message adapter: `list_messages`/`send_message` with sanitizing DTO mapping,
   presence read, provider-trait binding.
+- Message search: ranked `chatMessage` hits with sanitized summaries.
 - Read-only TUI panes with snapshot tests; keyboard map stubbed for composer phase.
 - Polling sync: per-chat `Poller` with watermark scheduling, chaos drills for
   duplicate/reordered pages, shutdown fail-fast.
