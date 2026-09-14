@@ -36,7 +36,9 @@ Full TUI: sidebar, conversation, composer, status bar, command palette, keyboard
 - `LiveServices::step`: compose mode (`i`), printable capture, `Backspace`,
   `Enter` submit via `handle_submit` against the selected chat (no selection =
   stay composing), `Esc` abandon, `Ctrl+Q` quits from any mode, send errors
-  recorded on `last_error` for future status rendering.
+  recorded on `last_error` and rendered in the status line (`feat/tui-status-error`).
+- `Confirm`: explicit ask/resolve model for destructive actions (first answer
+  wins); key-binding wiring is follow-up work.
 - Live TTY behavior is manual-verification only — never asserted in CI.
 
 ## Accessibility sign-off (MVP gate, re-verified)
