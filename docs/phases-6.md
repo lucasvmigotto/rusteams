@@ -16,15 +16,18 @@ Full TUI: sidebar, conversation, composer, status bar, command palette, keyboard
 - Optimistic send flow: `MessageSent(temp)` → `MessageConfirmed(temp_id, real)`
   swaps the temp entry; missing temp appends (restart-safe).
 
-## Keyboard map (models ready; event-loop bindings pending)
+## Keyboard map (`feat/tui-events`: mapper + harness bound)
 
 | Keys | Action | State |
 |---|---|---|
-| `j/k`, `Ctrl+n`/`Ctrl+p` | Move in chat list | Planned |
-| `Enter` | Open selected chat | Planned |
-| `Ctrl+K`, `/` | Command palette / search | Model ready (`Palette::filter`) |
+| `j/k`, `Ctrl+n`/`Ctrl+p` | Move in chat list | Bound (`map_key`) |
+| `Enter` | Open selected chat | Bound (`map_key`) |
+| `Ctrl+K`, `/` | Command palette / search | Bound (`map_key`, `Palette::filter`) |
 | Type + `Enter` | Compose and send | Model ready (`Composer`, `MessageConfirmed`) |
-| `Ctrl+Q` | Quit | Planned |
+| `Ctrl+Q` | Quit | Bound (terminates scripted stream) |
+| Unmapped keys | Ignored, never panic | Tested |
+
+Remaining: live crossterm event feed into the same fold (Stage B runtime).
 
 ## Accessibility notes (tracked, verified where testable)
 
