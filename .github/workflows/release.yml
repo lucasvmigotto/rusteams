@@ -127,12 +127,21 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: release-dist-*
-          path: dist-merge/
-          merge-multiple: true
-      - name: Verify SHASUMS before packaging
+          path: artifacts/
+      - name: Verify per-leg SHASUMS before packaging
         run: |
-          ls dist-merge/
-          (cd dist-merge && sha256sum -c SHASUMS)
+          (cd artifacts/release-dist-x86_64-unknown-linux-gnu && sha256sum -c SHASUMS)
+          (cd artifacts/release-dist-aarch64-unknown-linux-gnu && sha256sum -c SHASUMS)
+      - name: Stage per-arch dist layout for the image
+        run: |
+          mkdir -p dist/linux-amd64 dist/linux-arm64
+          cp artifacts/release-dist-x86_64-unknown-linux-gnu/rusteams-* dist/linux-amd64/rusteams
+          cp artifacts/release-dist-aarch64-unknown-linux-gnu/rusteams-* dist/linux-arm64/rusteams
+          chmod +x dist/linux-amd64/rusteams dist/linux-arm64/rusteams
+          cp artifacts/release-dist-x86_64-unknown-linux-gnu/VERSION dist/VERSION
+          cat artifacts/release-dist-*/BUILD-METADATA > dist/BUILD-METADATA
+          (cd dist && sha256sum linux-amd64/rusteams linux-arm64/rusteams VERSION BUILD-METADATA > SHASUMS)
+          cat dist/SHASUMS
       - uses: docker/setup-buildx-action@v3
       - name: Login to Docker Hub
         uses: docker/login-action@v3
