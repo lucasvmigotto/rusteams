@@ -7,6 +7,15 @@ verification against a test tenant is a user-side step (gated on tenant access).
 
 ## As-built design
 
+- `RefreshClient` (`src/infra/auth/refresh.rs`): `POST {authority}/oauth2/v2.0/token`
+  with `grant_type=refresh_token`; rejection maps to fixed-message auth errors.
+- `refresh_session`: load stored token → exchange → persist rotated replacement →
+  return fresh access token (memory only). No stored session fails closed with
+  login guidance; rejected grants fail as `authentication failed`.
+- Drills (`tests/auth_refresh.rs`): exchange + rotation persistence, fail-closed
+  empty session, rejected-grant error. Live wiring into `GraphClient`
+  construction remains (client currently takes a token string).
+
 - `DeviceCodeClient` (`src/infra/auth/client.rs`): `POST {authority}/oauth2/v2.0/devicecode`
   to start, `POST {authority}/oauth2/v2.0/token` to poll. Authority is
   `https://login.microsoftonline.com/{tenant}` in production, wiremock base in tests.

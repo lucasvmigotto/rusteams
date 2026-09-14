@@ -19,6 +19,8 @@ is SemVer with `MVP ≠ 1.0.0`.
 - Device-code login: `DeviceCodeClient` with slow_down/expiry handling, CLI
   `login` wired to OS-keyring persistence, BYO-app setup guide. Live
   verification pending tenant access.
+- Silent refresh: `refresh_session` exchanges and rotates keyring tokens,
+  fail-closed without a session.
 - Message adapter: `list_messages`/`send_message` with sanitizing DTO mapping,
   presence read, provider-trait binding.
 - Read-only TUI panes with snapshot tests; keyboard map stubbed for composer phase.
