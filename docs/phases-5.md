@@ -26,9 +26,9 @@ Near-real-time sync without webhooks: poll + diff + reconnect state machine.
 
 ## Remaining (live-loop integration, with the runtime)
 
-- Binding `Supervisor::run` without a tick bound as the endless production
-  task (same code path as the drilled bounded runs); wiring `Shutdown` from
-  SIGINT/quit into the shared signal.
+- Binding `Supervisor::run_endless` as the production task with `watch_ctrl_c`
+  feeding the shared `Shutdown` (both implemented; live-signal delivery is
+  manual-verification only per the runbook).
 
 ## Non-Goals
 

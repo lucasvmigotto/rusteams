@@ -9,7 +9,7 @@
 
 use super::connection::{ConnectionEvent, backoff_delay};
 use super::reducer::{AppState, Command, Event};
-use super::shutdown::Shutdown;
+use super::shutdown::{Shutdown, ShutdownTrigger};
 use crate::app::app_state::ConnectionState;
 use crate::domain::diff_sync;
 use crate::error::AppError;
@@ -187,6 +187,27 @@ impl<P: ChatProvider> Supervisor<P> {
         }
         Ok(out)
     }
+
+    /// Endless production loop: bounded runs back-to-back until shutdown.
+    /// Same code path as the drilled bounded runs; returns Err(Shutdown).
+    pub async fn run_endless(&mut self, state: &mut AppState) -> Result<Vec<Event>, AppError> {
+        loop {
+            // u32::MAX iterations per chunk keeps watermarks/backoff continuous
+            // while preserving the testable bound.
+            self.run(state, u32::MAX).await?;
+        }
+    }
+}
+
+/// Spawn a SIGINT watcher that fires the shared shutdown. The runtime owns
+/// the task; dropping the handle does not disarm it. Live-signal delivery is
+/// manual-verification only (see live-verification runbook).
+pub fn watch_ctrl_c(trigger: ShutdownTrigger) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        if tokio::signal::ctrl_c().await.is_ok() {
+            trigger.trigger();
+        }
+    })
 }
 
 /// Timer-driven sync loop: one scheduler owning poller, watermarks, and

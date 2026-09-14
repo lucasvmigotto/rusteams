@@ -55,6 +55,7 @@ is SemVer with `MVP ≠ 1.0.0`.
   drop-heal recovery drills.
 - Supervised sync: interval ticks with capped exponential backoff on failures,
   shutdown stop.
+- Endless supervisor run plus SIGINT hook for production wiring.
 - Timer-driven `SyncLoop`: sweep + due poll per tick, shutdown fail-fast,
   throttle-then-retry convergence.
 - Composer buffer + palette filter; optimistic-send confirm flow in the reducer;
