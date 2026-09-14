@@ -57,6 +57,8 @@ is SemVer with `MVP ≠ 1.0.0`.
   throttle-then-retry convergence.
 - Composer buffer + palette filter; optimistic-send confirm flow in the reducer;
   keyboard map and accessibility notes started.
+- Compose send wiring: `handle_submit` with rollback, `LiveServices` compose
+  mode, live event-loop feed.
 - Bound key-to-command map (Vim + Emacs) with scripted event-loop harness.
 - TUI runtime wiring: terminal acquire/restore lifecycle, `ReadView` assembly,
   action folding, `AppError::Terminal`.
