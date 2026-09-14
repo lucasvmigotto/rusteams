@@ -81,6 +81,40 @@ pub fn render_read_view(f: &mut Frame, view: &ReadView) {
 use super::keys::KeyAction;
 use crate::app::{AppState, Command};
 
+/// Render one message's segments as styled lines: links underlined with their
+/// URL visible, code blocks bold and indented. Empty segments fall back to the
+/// plain body in a single default-styled line.
+pub fn message_lines(msg: &crate::domain::ChatMessage) -> Vec<ratatui::text::Line<'static>> {
+    use ratatui::style::{Modifier, Style};
+    use ratatui::text::{Line, Span};
+    if msg.segments.is_empty() {
+        return vec![Line::from(msg.body.clone())];
+    }
+    let mut lines = Vec::new();
+    for seg in &msg.segments {
+        match seg {
+            crate::domain::RichSegment::Text(t) => {
+                lines.push(Line::from(t.clone()));
+            }
+            crate::domain::RichSegment::Link { text, url } => {
+                lines.push(Line::from(vec![
+                    Span::styled(text.clone(), Style::new().add_modifier(Modifier::UNDERLINED)),
+                    Span::raw(format!(" ({url})")),
+                ]));
+            }
+            crate::domain::RichSegment::CodeBlock { lines: code } => {
+                for line in code {
+                    lines.push(Line::from(Span::styled(
+                        format!("    {line}"),
+                        Style::new().add_modifier(Modifier::BOLD),
+                    )));
+                }
+            }
+        }
+    }
+    lines
+}
+
 /// Assemble a [`ReadView`] from app state: sidebar rows with unread flags,
 /// selected chat's messages with HH:MM stamps, connection label, key hints.
 pub fn build_read_view(state: &AppState) -> ReadView {
