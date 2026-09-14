@@ -5,7 +5,8 @@
 
 use async_trait::async_trait;
 use rusteams::app::{
-    AppState, Command, Poller, Shutdown, Watermarks, note_connection, poll_due_chats, refresh_chats,
+    AppState, Command, Event, Poller, Shutdown, SyncLoop, Watermarks, note_connection,
+    poll_due_chats, refresh_chats,
 };
 use rusteams::app::{app_state::ConnectionState, connection::ConnectionEvent};
 use rusteams::domain::{Chat, ChatMessage};
@@ -249,4 +250,59 @@ async fn drill_reconnect_event_rebaselines_watermarks() {
         marks.is_due("chat-1", Duration::from_secs(3600)),
         "reconnect clears watermarks for re-baseline"
     );
+}
+
+#[tokio::test]
+async fn drill_tick_sweeps_and_polls_selected_chat() {
+    let provider = MockTeamsProvider::new();
+    provider.send_message("chat-1", "hi").await.unwrap();
+    let (_trigger, shutdown) = shutdown_pair();
+    let mut sync_loop = SyncLoop::new(provider, shutdown, Duration::from_secs(60));
+    let mut state = AppState::default();
+    state.apply(Command::SelectChat { chat_id: "chat-1".into() });
+    let events = sync_loop.tick(&mut state).await.expect("drill: tick works");
+    assert!(!events.is_empty(), "first tick sweeps + polls");
+    assert_eq!(state.chats.len(), 1);
+    assert_eq!(state.messages.len(), 1);
+    let quiet = sync_loop.tick(&mut state).await.expect("drill: second tick runs");
+    // Sweep always reports; message poll stays quiet on fresh watermarks.
+    assert!(quiet.iter().all(|e| !matches!(e, Event::MessageAppended { .. })));
+}
+
+#[tokio::test]
+async fn drill_tick_without_selection_sweeps_only() {
+    let provider = MockTeamsProvider::new();
+    let (_trigger, shutdown) = shutdown_pair();
+    let mut sync_loop = SyncLoop::new(provider, shutdown, Duration::from_secs(60));
+    let mut state = AppState::default();
+    let events = sync_loop.tick(&mut state).await.expect("drill: sweep tick works");
+    assert_eq!(state.chats.len(), 1);
+    assert!(state.messages.is_empty());
+    let _ = events;
+}
+
+#[tokio::test]
+async fn drill_tick_stops_at_shutdown() {
+    let (trigger, shutdown) = shutdown_pair();
+    trigger.trigger();
+    let mut sync_loop = SyncLoop::new(MockTeamsProvider::new(), shutdown, Duration::from_secs(1));
+    let mut state = AppState::default();
+    let err = sync_loop.tick(&mut state).await.expect_err("drill: stopped tick");
+    assert_eq!(err.user_message(), "shutting down");
+}
+
+#[tokio::test]
+async fn drill_throttled_tick_stays_due_and_retries() {
+    let provider = MockTeamsProvider::new();
+    provider.send_message("chat-1", "hi").await.unwrap();
+    provider.fail_next_with_throttle();
+    let (_trigger, shutdown) = shutdown_pair();
+    let mut sync_loop = SyncLoop::new(provider, shutdown, Duration::from_secs(60));
+    let mut state = AppState::default();
+    state.apply(Command::SelectChat { chat_id: "chat-1".into() });
+    let err = sync_loop.tick(&mut state).await.expect_err("drill: throttled tick fails");
+    assert!(err.to_string().contains("429"), "throttle surfaces, got: {err}");
+    let events = sync_loop.tick(&mut state).await.expect("drill: retry tick works");
+    assert!(!events.is_empty(), "retry after throttle converges");
+    assert_eq!(state.messages.len(), 1);
 }
