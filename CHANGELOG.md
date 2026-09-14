@@ -14,6 +14,11 @@ is SemVer with `MVP ≠ 1.0.0`.
 - Property tests: sanitizer safety/idempotence, ordering/dedupe idempotence,
   diff completeness, thread-builder termination.
 - Cooperative shutdown signal, drop-guard teardown, `AppError::Shutdown`.
+- Graph adapter drills: `GraphClient` chat listing with 429/`Retry-After`
+  retries, `@odata.nextLink` paging, 401/malformed failure modes (mocked).
+- Device-code login: `DeviceCodeClient` with slow_down/expiry handling, CLI
+  `login` wired to OS-keyring persistence, BYO-app setup guide. Live
+  verification pending tenant access.
 
 ## [0.1.0] — 2026-09-14 (Phase 0 scaffold)
 
