@@ -1,0 +1,3 @@
+# Clippy configuration — deny common pitfalls, allow deliberate choices via code attributes.
+cognitive-complexity-threshold = 30
+too-many-arguments-threshold = 7
