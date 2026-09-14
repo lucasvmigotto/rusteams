@@ -46,3 +46,28 @@ async fn drill_retries_once_after_429_then_succeeds() {
     assert_eq!(chats.len(), 1);
     assert_eq!(chats[0].id, "chat-9");
 }
+
+#[tokio::test]
+async fn drill_follows_next_link_pages() {
+    let server = MockServer::start().await;
+    let next = format!("{}/me/chats?$skip=1", server.uri());
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "value": [{ "id": "chat-1", "topic": null }],
+            "@odata.nextLink": next,
+        })))
+        .up_to_n_times(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "value": [{ "id": "chat-2", "topic": null }]
+        })))
+        .mount(&server)
+        .await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    let chats = client.list_chats().await.expect("drill: pages followed");
+    let ids: Vec<&str> = chats.iter().map(|c| c.id.as_str()).collect();
+    assert_eq!(ids, vec!["chat-1", "chat-2"]);
+}
