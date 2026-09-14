@@ -16,12 +16,16 @@ Near-real-time sync without webhooks: poll + diff + reconnect state machine.
   every chat; next complete-fetch diffs heal gaps.
 - Drop-injection drill: lost message reported, then healed on next poll —
   missed-event recovery demonstrated in tests.
+- `SyncLoop` timer core (`feat/sync-timer`): sweep + due-gated poll per tick,
+  shutdown fail-fast without touching state, throttled ticks stay due and
+  converge on retry. Drilled: sweep-only without selection, throttle→retry.
 - Latency honesty: no push claims anywhere; see README.
 
 ## Remaining (live-loop integration, with the runtime)
 
-- Running the tick on a timer inside the supervised task tree; backoff/jitter
-  caps on the schedule (primitives exist: `backoff_delay`, `is_due`).
+- Running the tick on a timer inside the supervised task tree (`SyncLoop::tick`
+  is the testable core; the sleeping supervisor binds `Shutdown` + `interval`).
+  Backoff/jitter caps on the schedule (primitives exist: `backoff_delay`, `is_due`).
 
 ## Non-Goals
 
