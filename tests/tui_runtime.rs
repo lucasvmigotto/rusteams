@@ -31,6 +31,7 @@ fn msg(id: &str, chat: &str, sender: &str, body: &str) -> ChatMessage {
         reactions: vec![],
         mentions: vec![],
         is_read: false,
+        segments: vec![],
     }
 }
 

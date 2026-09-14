@@ -56,6 +56,7 @@ fn order_10k_messages_completes_within_budget() {
                 reactions: vec![],
                 mentions: vec![],
                 is_read: false,
+                segments: vec![],
             }
         })
         .collect();

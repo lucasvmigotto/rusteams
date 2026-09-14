@@ -92,6 +92,7 @@ pub async fn handle_submit<P: ChatProvider>(
         reactions: vec![],
         mentions: vec![],
         is_read: true,
+        segments: vec![],
     };
     let mut events = state.apply(Command::MessageSent { message: temp });
     match provider.send_message(chat_id, text).await {
