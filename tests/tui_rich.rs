@@ -32,17 +32,23 @@ fn msg_with_segments() -> ChatMessage {
 #[test]
 fn links_render_underlined_with_url_visible() {
     let lines = message_lines(&msg_with_segments());
-    let link_line = lines.iter().find(|l| l.width() > 0 && format!("{l:?}").contains("docs")).expect("link line");
+    let link_line = lines
+        .iter()
+        .find(|l| l.width() > 0 && format!("{l:?}").contains("docs"))
+        .expect("link line");
     assert!(link_line.spans.iter().any(|s| s.style.add_modifier.contains(Modifier::UNDERLINED)));
-    let all: String = lines.iter().flat_map(|l| l.spans.iter().map(|s| s.content.as_ref())).collect();
+    let all: String =
+        lines.iter().flat_map(|l| l.spans.iter().map(|s| s.content.as_ref())).collect();
     assert!(all.contains("https://example.com/x"), "url visible in plain form");
 }
 
 #[test]
 fn code_lines_render_bold_and_indented() {
     let lines = message_lines(&msg_with_segments());
-    let code_line =
-        lines.iter().find(|l| l.spans.iter().any(|s| s.content.contains("fn main"))).expect("code line");
+    let code_line = lines
+        .iter()
+        .find(|l| l.spans.iter().any(|s| s.content.contains("fn main")))
+        .expect("code line");
     assert!(code_line.spans.iter().any(|s| s.style.add_modifier.contains(Modifier::BOLD)));
 }
 
