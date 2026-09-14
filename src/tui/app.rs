@@ -111,7 +111,10 @@ pub fn build_read_view(state: &AppState) -> ReadView {
         chats,
         selected_chat: state.selected_chat.clone(),
         messages,
-        status: "j/k move · Enter open · / palette · Ctrl+Q quit".into(),
+        status: format!(
+            "j/k move · Enter open · / palette · Ctrl+Q quit · rusteams {}",
+            env!("CARGO_PKG_VERSION")
+        ),
     }
 }
 
