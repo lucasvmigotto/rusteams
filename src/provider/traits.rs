@@ -12,6 +12,25 @@ pub trait ChatProvider: Send + Sync {
     async fn list_chats(&self) -> Result<Vec<Chat>, AppError>;
     async fn list_messages(&self, chat_id: &str) -> Result<Vec<ChatMessage>, AppError>;
     async fn send_message(&self, chat_id: &str, body: &str) -> Result<ChatMessage, AppError>;
+    async fn update_message(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        body: &str,
+    ) -> Result<ChatMessage, AppError>;
+    async fn delete_message(&self, chat_id: &str, message_id: &str) -> Result<(), AppError>;
+    async fn set_reaction(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        kind: &str,
+    ) -> Result<(), AppError>;
+    async fn unset_reaction(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        kind: &str,
+    ) -> Result<(), AppError>;
 }
 
 /// Presence surface (MVP: read own + others).
