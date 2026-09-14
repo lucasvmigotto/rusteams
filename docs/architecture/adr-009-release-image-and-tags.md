@@ -15,8 +15,9 @@
      third arch means extending the build matrix, not the Dockerfile.
   3. **Tags:** bare `X.Y.Z` on Git and both registries; no `latest`; `v`
      prefix lives only in prose/release titles.
-  4. **Registries:** Docker Hub (`lucasvmigotto/rusteams`, PAT-isolated job)
-     and GHCR (`ghcr.io/lucasvmigotto/rusteams`, `GITHUB_TOKEN` only).
+  4. **Registries:** Docker Hub (`${{ github.repository }}`, username derived
+     from the GitHub owner so only the PAT is secret) and GHCR
+     (`ghcr.io/${{ github.repository }}`, `GITHUB_TOKEN` only).
   5. **Scan:** Trivy warn-only SARIF artifact; fail-gate deferred to keep the
      first pipeline shippable while findings are triaged.
 - Consequences: images are non-debuggable by design; keyring-backed login

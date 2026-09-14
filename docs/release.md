@@ -50,9 +50,14 @@ quality (no secrets)
 
 | Secret | Scope | Used by |
 |---|---|---|
-| `DOCKER_HUB_USERNAME` | Docker Hub account | `docker` job only |
-| `DOCKER_HUB_PAT` | Docker Hub PAT (write) | `docker` job only |
+| `DOCKER_HUB_PAT` | Docker Hub PAT (write) on the account matching the GitHub owner | `docker` job only |
 | `GITHUB_TOKEN` | automatic (`packages: write`) | `docker` job (GHCR) only |
+
+Image repositories derive from the GitHub context — no hardcoded organization:
+Docker Hub `${{ github.repository }}` (i.e. `lucasvmigotto/rusteams`) and GHCR
+`ghcr.io/${{ github.repository }}`; the Docker Hub login username is
+`${{ github.repository_owner }}`. The Docker Hub account must therefore match
+the GitHub username — only the PAT is stored.
 
 No secret is available to quality/build/tag jobs. Never enable shell tracing
 around credentials; never `env`/`printenv` in credential-bearing jobs.
@@ -103,7 +108,7 @@ Recommended extras (not vendored): `shellcheck`, `actionlint`, `act`.
 |---|---|
 | `Cargo.toml version could not be determined.` | cargo/perl missing or manifest unparseable; see script diagnostics |
 | `Git tag X.Y.Z already exists.` | Version not bumped; bump `Cargo.toml`, never move the tag |
-| `Required Docker Hub credentials are not configured.` | Set `DOCKER_HUB_USERNAME` + `DOCKER_HUB_PAT` repo secrets |
+| `Required Docker Hub credentials are not configured.` | Set the `DOCKER_HUB_PAT` repo secret on the account matching the GitHub owner |
 | `Release artifact was not generated.` | `dist/` step failed; inspect build job before the docker job |
 | Trivy findings | Warn-only today; triage, then track the fail-gate follow-up |
 
