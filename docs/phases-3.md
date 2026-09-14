@@ -4,7 +4,7 @@
 
 Conversation list, message history, presence, and search over live Graph.
 
-## Delivered so far (`feat/graph-messages`, `feat/graph-search`, `feat/graph-mentions-read`, `feat/graph-query`)
+## Delivered so far (`feat/graph-messages`, `feat/graph-search`, `feat/graph-mentions-read`, `feat/graph-query`, `feat/graph-htmltext`)
 
 - `GraphClient::list_chats` (paged), `list_messages` (paged + ordered),
   `send_message`, `my_presence` — all DTO-mapped with sanitized bodies/topics.
@@ -18,6 +18,11 @@ Conversation list, message history, presence, and search over live Graph.
   `$top`, encoded), `list_messages_since`, single-message `get_message` for
   search-hit hydration, `lastMessagePreview` hydration onto chats (fail-soft
   timestamps).
+- HTML rendering (`feat/graph-htmltext`): hand-rolled scanner (no new deps)
+  producing `RichSegment`s — links as `text (url)`, code blocks as line lists,
+  lists/paragraphs break lines, malformed markup falls back to text. Domain
+  `body` stays plain (segments alongside); TUI maps segments to styled lines
+  (underlined links, bold indented code) with plain fallback.
 - `ChatProvider` + `PresenceProvider` bound to the adapter; trait-object drills green.
 - Retry discipline shared by all endpoints (429/5xx, capped `Retry-After`, 401 fast-fail).
 
@@ -25,8 +30,6 @@ Conversation list, message history, presence, and search over live Graph.
 
 - `$orderby`/lazy loading against live data; unread via Graph viewpoint
   (list responses carry no read state — documented, deferred)
-- Full HTML→sanitized-text rendering model; links/code/emoji mapping beyond
-  `<at>` tags
 
 ## Non-Goals
 

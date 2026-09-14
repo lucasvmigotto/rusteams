@@ -58,6 +58,9 @@ struct HostedContentDto {
 struct ItemBodyDto {
     #[serde(default)]
     content: String,
+    #[serde(default)]
+    #[serde(rename = "contentType")]
+    content_type: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -142,9 +145,18 @@ fn map_message(chat_id: &str, dto: MessageDto) -> Result<ChatMessage, AppError> 
         Some(s) => parse_time(&s)?,
         None => created,
     };
-    let raw = dto.body.map(|b| b.content).unwrap_or_default();
-    let with_ats = render_at_tags(&raw);
-    let body = crate::sanitize::sanitize(&with_ats);
+    let (raw, is_html) = dto
+        .body
+        .map(|b| (b.content, b.content_type.as_deref() == Some("html")))
+        .unwrap_or_default();
+    let with_ats = super::html::render_at_tags(&raw);
+    let mut segments = if is_html {
+        super::html::render_html_body(&with_ats)
+    } else {
+        vec![crate::domain::RichSegment::Text(with_ats.clone())]
+    };
+    sanitize_segments(&mut segments);
+    let body = segments.iter().map(|s| s.plain()).collect::<Vec<_>>().join("");
     let sender = dto
         .from
         .and_then(|f| f.user)
@@ -180,33 +192,27 @@ fn map_message(chat_id: &str, dto: MessageDto) -> Result<ChatMessage, AppError> 
         reply_to_id: None,
         reactions: vec![],
         mentions,
+        segments,
         is_read: false,
     })
 }
 
-/// Convert `<at id="N">Name</at>` segments to `@Name`. Other markup passes
-/// through untouched (full HTML→text remains deferred Phase 3 work).
-fn render_at_tags(html: &str) -> String {
-    let mut out = String::with_capacity(html.len());
-    let mut rest = html;
-    while let Some(start) = rest.find("<at ") {
-        out.push_str(&rest[..start]);
-        let after_open = &rest[start..];
-        match after_open.find('>').map(|i| (i, after_open.find("</at>"))) {
-            Some((tag_end, Some(close))) if close > tag_end => {
-                let name = &after_open[tag_end + 1..close];
-                out.push('@');
-                out.push_str(name);
-                rest = &after_open[close + "</at>".len()..];
+/// Sanitize every segment text in place (structure preserved).
+fn sanitize_segments(segments: &mut [crate::domain::RichSegment]) {
+    for seg in segments {
+        match seg {
+            crate::domain::RichSegment::Text(t) => *t = crate::sanitize::sanitize(t),
+            crate::domain::RichSegment::Link { text, url } => {
+                *text = crate::sanitize::sanitize(text);
+                *url = crate::sanitize::sanitize(url);
             }
-            _ => {
-                out.push_str(after_open);
-                break;
+            crate::domain::RichSegment::CodeBlock { lines } => {
+                for line in lines {
+                    *line = crate::sanitize::sanitize(line);
+                }
             }
         }
     }
-    out.push_str(rest);
-    out
 }
 
 impl GraphClient {

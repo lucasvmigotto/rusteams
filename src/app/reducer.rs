@@ -172,6 +172,7 @@ mod tests {
             reactions: vec![],
             mentions: vec![],
             is_read: false,
+            segments: vec![],
         }
     }
 
