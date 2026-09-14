@@ -36,6 +36,14 @@ struct ChatDto {
 }
 
 #[derive(Debug, Deserialize)]
+struct HostedContentDto {
+    id: String,
+    #[serde(default)]
+    #[serde(rename = "contentType")]
+    content_type: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
 struct ItemBodyDto {
     #[serde(default)]
     content: String,
@@ -351,6 +359,80 @@ impl GraphClient {
         let dto: MessageDto =
             resp.json().await.map_err(|_| AppError::Provider("malformed graph response".into()))?;
         map_message(chat_id, dto)
+    }
+
+    /// Escape text embedded in outgoing HTML (`<at>` tags). Directory data is
+    /// not trusted inside markup.
+    fn escape_html(s: &str) -> String {
+        s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+    }
+
+    /// Mention a user (`POST …/messages`, HTML body + mentions array per the
+    /// documented `<at id>` schema). Display names are HTML-escaped.
+    pub async fn send_mention(
+        &self,
+        chat_id: &str,
+        text_before: &str,
+        user_id: &str,
+        display_name: &str,
+    ) -> Result<ChatMessage, AppError> {
+        let safe_name = Self::escape_html(display_name);
+        let content = format!("{}<at id=\"0\">{safe_name}</at>", Self::escape_html(text_before));
+        let url = messages_url(&self.base, chat_id);
+        let resp = self
+            .auth(self.http.post(&url))
+            .json(&serde_json::json!({
+                "body": { "contentType": "html", "content": content },
+                "mentions": [{
+                    "id": 0,
+                    "mentionText": display_name,
+                    "mentioned": {
+                        "user": {
+                            "id": user_id,
+                            "displayName": display_name,
+                            "userIdentityType": "aadUser"
+                        }
+                    }
+                }]
+            }))
+            .send()
+            .await
+            .map_err(|e| AppError::Network(safe_network_message(&e)))?;
+        let status = resp.status().as_u16();
+        if status == 401 {
+            return Err(AppError::Auth("graph rejected credentials".into()));
+        }
+        if !(200..300).contains(&status) {
+            return Err(AppError::Network(format!("graph HTTP {status}")));
+        }
+        let dto: MessageDto =
+            resp.json().await.map_err(|_| AppError::Provider("malformed graph response".into()))?;
+        map_message(chat_id, dto)
+    }
+
+    /// List hosted-content refs for a message (`GET …/hostedContents`).
+    /// Returns `(content_id, content_type)` pairs; fetch bytes separately.
+    pub async fn list_hosted_contents(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+    ) -> Result<Vec<(String, String)>, AppError> {
+        let url = format!("{}/hostedContents", self.message_url(chat_id, message_id));
+        let resp = self.get(&url).await?;
+        let status = resp.status().as_u16();
+        if status == 401 {
+            return Err(AppError::Auth("graph rejected credentials".into()));
+        }
+        if !(200..300).contains(&status) {
+            return Err(AppError::Network(format!("graph HTTP {status}")));
+        }
+        let env: Envelope<HostedContentDto> =
+            resp.json().await.map_err(|_| AppError::Provider("malformed graph response".into()))?;
+        Ok(env
+            .value
+            .into_iter()
+            .map(|h| (h.id, h.content_type.unwrap_or_else(|| "application/octet-stream".into())))
+            .collect())
     }
 
     /// Fetch hosted message content bytes (images, code snippets).
