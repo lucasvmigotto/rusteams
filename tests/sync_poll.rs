@@ -253,6 +253,55 @@ async fn drill_reconnect_event_rebaselines_watermarks() {
 }
 
 #[tokio::test]
+async fn drill_supervisor_converges_then_idles() {
+    use rusteams::app::Supervisor;
+
+    let provider = MockTeamsProvider::new();
+    provider.send_message("chat-1", "hi").await.unwrap();
+    let (_trigger, shutdown) = shutdown_pair();
+    let mut supervisor =
+        Supervisor::new(provider, shutdown, Duration::from_millis(1), Duration::from_millis(1));
+    let mut state = AppState::default();
+    state.apply(Command::SelectChat { chat_id: "chat-1".into() });
+    supervisor.run(&mut state, 3).await.expect("drill: supervised run works");
+    assert_eq!(state.messages.len(), 1);
+    assert_eq!(state.chats.len(), 1);
+}
+
+#[tokio::test]
+async fn drill_supervisor_backs_off_throttle_then_recovers() {
+    use rusteams::app::Supervisor;
+
+    let provider = MockTeamsProvider::new();
+    provider.send_message("chat-1", "hi").await.unwrap();
+    provider.fail_next_with_throttle();
+    let (_trigger, shutdown) = shutdown_pair();
+    let mut supervisor =
+        Supervisor::new(provider, shutdown, Duration::from_millis(1), Duration::from_millis(1));
+    let mut state = AppState::default();
+    state.apply(Command::SelectChat { chat_id: "chat-1".into() });
+    supervisor.run(&mut state, 3).await.expect("drill: backoff run works");
+    assert_eq!(state.messages.len(), 1, "throttle absorbed, state converged");
+}
+
+#[tokio::test]
+async fn drill_supervisor_stops_at_shutdown() {
+    use rusteams::app::Supervisor;
+
+    let (trigger, shutdown) = shutdown_pair();
+    trigger.trigger();
+    let mut supervisor = Supervisor::new(
+        MockTeamsProvider::new(),
+        shutdown,
+        Duration::from_millis(1),
+        Duration::from_millis(1),
+    );
+    let mut state = AppState::default();
+    let err = supervisor.run(&mut state, 10).await.expect_err("drill: stopped run");
+    assert_eq!(err.user_message(), "shutting down");
+}
+
+#[tokio::test]
 async fn drill_tick_sweeps_and_polls_selected_chat() {
     let provider = MockTeamsProvider::new();
     provider.send_message("chat-1", "hi").await.unwrap();
