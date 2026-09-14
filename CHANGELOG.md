@@ -3,6 +3,18 @@
 All notable changes are documented here. Format follows Keep a Changelog; versioning
 is SemVer with `MVP ≠ 1.0.0`.
 
+## [Unreleased] — Phase 1: core domain and application architecture
+
+### Added
+- Rich domain: reactions, mentions, read markers, reply-thread builder,
+  fail-safe presence parsing.
+- App commands/events with pure reducers; connection events drive the Phase 0
+  state machine.
+- Shared provider contract suite (C1–C6) for mock now, Graph adapter later.
+- Property tests: sanitizer safety/idempotence, ordering/dedupe idempotence,
+  diff completeness, thread-builder termination.
+- Cooperative shutdown signal, drop-guard teardown, `AppError::Shutdown`.
+
 ## [0.1.0] — 2026-09-14 (Phase 0 scaffold)
 
 ### Added
