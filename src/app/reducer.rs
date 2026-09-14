@@ -16,6 +16,9 @@ pub enum Command {
     MessagesLoaded { chat_id: String, messages: Vec<ChatMessage> },
     MessageSent { message: ChatMessage },
     MessageReceived { message: ChatMessage },
+    /// Server echo for an optimistic send: swap the temp-id message for the
+    /// confirmed one, or append when no temp entry exists (e.g. after restart).
+    MessageConfirmed { temp_id: String, message: ChatMessage },
     SyncDiffApplied { chat_id: String, changed: Vec<ChatMessage>, deleted: Vec<String> },
     ConnectionEvent(ConnectionEvent),
 }
@@ -195,5 +198,27 @@ mod tests {
         s.apply(Command::MessagesLoaded { chat_id: "c1".into(), messages: vec![msg("m1")] });
         assert!(s.messages.iter().any(|m| m.id == "other"));
         assert!(s.messages.iter().any(|m| m.id == "m1"));
+    }
+
+    #[test]
+    fn confirmed_send_swaps_temp_for_real_message() {
+        let mut s = AppState::default();
+        let mut temp = msg("temp-1");
+        temp.body = "draft".into();
+        s.apply(Command::MessageSent { message: temp });
+        let mut real = msg("m-9");
+        real.body = "draft".into();
+        let ev = s.apply(Command::MessageConfirmed { temp_id: "temp-1".into(), message: real });
+        assert_eq!(ev, vec![Event::MessageUpserted { id: "m-9".into() }]);
+        assert_eq!(s.messages.len(), 1);
+        assert_eq!(s.messages[0].id, "m-9");
+    }
+
+    #[test]
+    fn confirmed_send_without_temp_appends() {
+        let mut s = AppState::default();
+        let ev = s.apply(Command::MessageConfirmed { temp_id: "gone".into(), message: msg("m-9") });
+        assert_eq!(ev, vec![Event::MessageAppended { id: "m-9".into() }]);
+        assert_eq!(s.messages.len(), 1);
     }
 }
