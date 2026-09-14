@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use rusteams::infra::graph::GraphClient;
+use rusteams::provider::{ChatProvider, PresenceProvider};
 use wiremock::{Mock, MockServer, ResponseTemplate, matchers::method};
 
 #[tokio::test]
@@ -138,4 +139,28 @@ async fn drill_send_returns_created_message() {
     let msg = client.send_message("chat-1", "sent!").await.expect("drill: send works");
     assert_eq!(msg.id, "m9");
     assert_eq!(msg.body, "sent!");
+}
+
+#[tokio::test]
+async fn drill_adapter_serves_provider_traits() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "value": [{ "id": "chat-1", "topic": null }]
+        })))
+        .up_to_n_times(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "availability": "Available"
+        })))
+        .mount(&server)
+        .await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    let provider: &dyn ChatProvider = &client;
+    assert_eq!(provider.list_chats().await.expect("drill: trait list").len(), 1);
+    let presence: &dyn PresenceProvider = &client;
+    assert_eq!(presence.my_presence().await.expect("drill: trait presence"), "Available");
 }

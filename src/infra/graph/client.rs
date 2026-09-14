@@ -7,6 +7,8 @@
 
 use crate::domain::{Chat, ChatMessage};
 use crate::error::AppError;
+use crate::provider::{ChatProvider, PresenceProvider};
+use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
@@ -227,6 +229,41 @@ impl GraphClient {
         let dto: MessageDto =
             resp.json().await.map_err(|_| AppError::Provider("malformed graph response".into()))?;
         map_message(chat_id, dto)
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct PresenceDto {
+    #[serde(default)]
+    availability: Option<String>,
+}
+
+#[async_trait]
+impl ChatProvider for GraphClient {
+    async fn list_chats(&self) -> Result<Vec<Chat>, AppError> {
+        GraphClient::list_chats(self).await
+    }
+
+    async fn list_messages(&self, chat_id: &str) -> Result<Vec<ChatMessage>, AppError> {
+        GraphClient::list_messages(self, chat_id).await
+    }
+
+    async fn send_message(&self, chat_id: &str, body: &str) -> Result<ChatMessage, AppError> {
+        GraphClient::send_message(self, chat_id, body).await
+    }
+}
+
+#[async_trait]
+impl PresenceProvider for GraphClient {
+    async fn my_presence(&self) -> Result<String, AppError> {
+        let url = format!("{}/me/presence", self.base);
+        let resp = self.get(&url).await?;
+        if resp.status().as_u16() == 401 {
+            return Err(AppError::Auth("graph rejected credentials".into()));
+        }
+        let dto: PresenceDto =
+            resp.json().await.map_err(|_| AppError::Provider("malformed graph response".into()))?;
+        Ok(dto.availability.unwrap_or_else(|| "Unknown".into()))
     }
 }
 
