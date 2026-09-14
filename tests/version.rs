@@ -12,7 +12,7 @@ fn package_version_is_present_and_semver_shaped() {
     assert!(!v.is_empty(), "version must exist");
     let parts: Vec<&str> = v.split('.').collect();
     assert_eq!(parts.len(), 3, "version follows X.Y.Z, got: {v}");
-    assert!(parts.iter().all(|p| p.chars().all(|c| c.is_ascii_alphanumeric() || *c == '-')));
+    assert!(parts.iter().all(|p| p.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')));
 }
 
 #[test]
