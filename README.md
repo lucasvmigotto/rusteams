@@ -2,21 +2,25 @@
 
 **Terminal user interface (TUI) client for Microsoft Teams** — via official Microsoft Graph APIs.
 
-> Status: **Phase 0 scaffold (v0.1.0)**. Chat read/send, auth, and real-time sync are
-> under construction. This README documents only what exists today.
+> Status: **Phase 1 core + device-code login (unreleased)**. Live chat data,
+> TUI, and realtime polling are under construction. This README documents only
+> what exists today.
 
 ## What works today
 
-- `rusteams config|status|doctor|login|logout|version` CLI skeleton
-- Core domain (ordering, dedupe, sync diff), connection state machine with backoff
+- `rusteams login` via device-code flow (BYO Entra app, refresh token in OS
+  keyring) + `config|status|doctor|logout|version` — see
+  `docs/development/entra-setup.md`
+- Rich domain (reactions, mentions, threads, presence), pure reducers, connection
+  state machine with backoff
 - Terminal-output sanitizer (ANSI/OSC/C0-stripping security boundary)
-- Device-code protocol helpers + OS-keyring refresh-token store abstraction
-- Graph URL builders + 429/5xx retry classification
-- `MockTeamsProvider` for fully offline tests
+- `GraphClient` drills (chat listing, 429 retry, paging, failure modes) against
+  mock servers — no live data yet
+- Offline suites: unit + contract + property tests, `MockTeamsProvider`
 
 ## What does NOT work yet
 
-Real Microsoft sign-in, live chat listing, message send/receive, TUI. Anything claiming
+Live chat listing, message send/receive, TUI, realtime polling. Anything claiming
 otherwise is a bug — see `docs/phases-*.md` for the roadmap.
 
 ## Prerequisites
