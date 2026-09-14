@@ -194,3 +194,39 @@ async fn drill_delete_and_reactions_succeed() {
     client.set_reaction("chat-1", "m1", "like").await.expect("drill: react works");
     client.unset_reaction("chat-1", "m1", "like").await.expect("drill: unreact works");
 }
+
+#[tokio::test]
+async fn drill_reply_with_quote_returns_created_message() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(graph_message("m7", "quoting you")))
+        .mount(&server)
+        .await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    let msg = client
+        .reply_with_quote("chat-1", &["m1".to_string()], "quoting you")
+        .await
+        .expect("drill: quote works");
+    assert_eq!(msg.id, "m7");
+    assert_eq!(msg.body, "quoting you");
+}
+
+#[tokio::test]
+async fn drill_hosted_content_returns_typed_bytes() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .insert_header("Content-Type", "image/png")
+                .set_body_bytes(b"\x89PNG\r\n\x1a\n".to_vec()),
+        )
+        .mount(&server)
+        .await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    let content =
+        client.get_hosted_content("chat-1", "m1", "h1").await.expect("drill: hosted works");
+    assert_eq!(content.content_type, "image/png");
+    assert_eq!(content.bytes, b"\x89PNG\r\n\x1a\n");
+}
