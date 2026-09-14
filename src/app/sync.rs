@@ -7,7 +7,7 @@
 //! reordering collapse in `diff_sync`/`order_messages`; gaps heal on the next
 //! complete fetch (watermark re-baselining). Honors `Shutdown` fail-fast.
 
-use super::connection::ConnectionEvent;
+use super::connection::{ConnectionEvent, backoff_delay};
 use super::reducer::{AppState, Command, Event};
 use super::shutdown::Shutdown;
 use crate::app::app_state::ConnectionState;
@@ -130,6 +130,63 @@ pub fn note_connection(
         marks.reset();
     }
     events
+}
+
+/// Supervised sync loop: owns a [`SyncLoop`], sleeps `interval` between ticks,
+/// backs off exponentially (capped) on failed ticks, and stops on shutdown.
+/// `run` bounds the iteration count so the whole supervisor stays testable;
+/// the endeless production loop is `run` without a bound (same code path).
+pub struct Supervisor<P> {
+    sync_loop: SyncLoop<P>,
+    shutdown: Shutdown,
+    interval: Duration,
+    backoff_base: Duration,
+}
+
+impl<P: ChatProvider> Supervisor<P> {
+    pub fn new(
+        provider: P,
+        shutdown: Shutdown,
+        interval: Duration,
+        backoff_base: Duration,
+    ) -> Self {
+        Self {
+            sync_loop: SyncLoop::new(provider, shutdown.clone(), interval),
+            shutdown,
+            interval,
+            backoff_base,
+        }
+    }
+
+    /// Run up to `max_ticks` iterations. Fails fast on shutdown; backoff
+    /// sleeps (jitter 0 in-loop; callers add jitter) cap reconnect storms.
+    pub async fn run(
+        &mut self,
+        state: &mut AppState,
+        max_ticks: u32,
+    ) -> Result<Vec<Event>, AppError> {
+        let mut out = Vec::new();
+        let mut failures: u32 = 0;
+        for _ in 0..max_ticks {
+            if self.shutdown.is_triggered() {
+                return Err(AppError::Shutdown);
+            }
+            match self.sync_loop.tick(state).await {
+                Ok(mut events) => {
+                    failures = 0;
+                    out.append(&mut events);
+                }
+                Err(AppError::Shutdown) => return Err(AppError::Shutdown),
+                Err(_) => {
+                    failures += 1;
+                    let wait = backoff_delay(failures, self.backoff_base, self.interval, 0);
+                    tokio::time::sleep(wait).await;
+                }
+            }
+            tokio::time::sleep(self.interval).await;
+        }
+        Ok(out)
+    }
 }
 
 /// Timer-driven sync loop: one scheduler owning poller, watermarks, and
