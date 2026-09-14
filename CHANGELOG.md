@@ -44,6 +44,7 @@ is SemVer with `MVP ≠ 1.0.0`.
   mock and adapter implementations, all drilled.
 - Quote-reply per documented schema; hosted-content fetch with size cap.
 - Mention send with escaped `<at>` payload; hosted-content listing refs.
+- File references: documented attachment payload for pre-uploaded files.
 - Mention reads: normalized `Mention`s with approximate offsets, `@Name` body
   rendering.
 - HTML rendering: dependency-free scanner to `RichSegment`s, styled TUI lines
