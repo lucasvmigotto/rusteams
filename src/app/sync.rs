@@ -1,0 +1,83 @@
+// Polling-first sync engine: full-fetch polls per chat, diffed into AppState.
+// Copyright (C) 2026 rusteams contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+//! MVP realtime without webhooks: each poll fetches the whole visible history,
+//! diffs it, and applies the delta through the pure reducer. Duplicates and
+//! reordering collapse in `diff_sync`/`order_messages`; gaps heal on the next
+//! complete fetch (watermark re-baselining). Honors `Shutdown` fail-fast.
+
+use super::reducer::{AppState, Command, Event};
+use super::shutdown::Shutdown;
+use crate::domain::diff_sync;
+use crate::error::AppError;
+use crate::provider::ChatProvider;
+use std::collections::HashMap;
+use std::time::{Duration, Instant};
+
+/// Per-chat last-successful-poll watermarks driving poll scheduling.
+#[derive(Debug, Default)]
+pub struct Watermarks {
+    last_poll: HashMap<String, Instant>,
+}
+
+impl Watermarks {
+    /// Record a successful poll of `chat_id` now.
+    pub fn mark_synced(&mut self, chat_id: &str) {
+        self.last_poll.insert(chat_id.into(), Instant::now());
+    }
+
+    /// True when `chat_id` has never synced or its watermark is older than `interval`.
+    pub fn is_due(&self, chat_id: &str, interval: Duration) -> bool {
+        match self.last_poll.get(chat_id) {
+            Some(t) => t.elapsed() >= interval,
+            None => true,
+        }
+    }
+}
+
+/// Polls one provider into shared app state. Cheap to clone per task.
+pub struct Poller<P> {
+    provider: P,
+    shutdown: Shutdown,
+}
+
+impl<P: ChatProvider> Poller<P> {
+    pub fn new(provider: P, shutdown: Shutdown) -> Self {
+        Self { provider, shutdown }
+    }
+
+    /// One full-fetch poll of `chat_id`: diff against cached scope, apply the
+    /// delta, return reducer events (empty when already converged).
+    pub async fn poll_once(
+        &self,
+        state: &mut AppState,
+        chat_id: &str,
+    ) -> Result<Vec<Event>, AppError> {
+        if self.shutdown.is_triggered() {
+            return Err(AppError::Shutdown);
+        }
+        let fetched = self.provider.list_messages(chat_id).await?;
+        let cached: Vec<_> =
+            state.messages.iter().filter(|m| m.chat_id == chat_id).cloned().collect();
+        let (changed, deleted) = diff_sync(&cached, &fetched, true);
+        if changed.is_empty() && deleted.is_empty() {
+            return Ok(vec![]);
+        }
+        Ok(state.apply(Command::SyncDiffApplied { chat_id: chat_id.into(), changed, deleted }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn watermarks_are_due_until_synced() {
+        let mut w = Watermarks::default();
+        assert!(w.is_due("c1", Duration::from_secs(15)));
+        w.mark_synced("c1");
+        assert!(!w.is_due("c1", Duration::from_secs(3600)));
+        assert!(w.is_due("c1", Duration::from_secs(0)));
+    }
+}
