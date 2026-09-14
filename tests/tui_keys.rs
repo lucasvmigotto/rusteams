@@ -92,3 +92,35 @@ fn fold_without_quit_returns_false() {
     let mut state = AppState::default();
     assert!(!fold_actions(&mut state, &[KeyAction::NextChat, KeyAction::Open]));
 }
+
+#[test]
+fn insert_key_enters_compose_mode() {
+    assert_eq!(map_key(key(KeyCode::Char('i'))), Some(KeyAction::Compose));
+}
+
+#[test]
+fn live_step_types_submits_and_quits() {
+    use rusteams::app::AppState;
+    use rusteams::provider::MockTeamsProvider;
+    use rusteams::tui::LiveServices;
+
+    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+    rt.block_on(async {
+        let mut state = AppState::default();
+        let mut services = LiveServices::new(MockTeamsProvider::new());
+        assert!(!services.step(&mut state, key(KeyCode::Char('i'))).await);
+        assert!(services.composing());
+        assert!(!services.step(&mut state, key(KeyCode::Char('h'))).await);
+        assert!(!services.step(&mut state, key(KeyCode::Char('i'))).await);
+        assert_eq!(services.draft(), "hi");
+        // Submitting with no chat selected is a no-op, stays composing.
+        assert!(!services.step(&mut state, key(KeyCode::Enter)).await);
+        assert!(services.composing());
+        // Escape abandons the draft.
+        assert!(!services.step(&mut state, key(KeyCode::Esc)).await);
+        assert!(!services.composing());
+        assert_eq!(services.draft(), "");
+        // Quit still terminates from any mode.
+        assert!(services.step(&mut state, ctrl(KeyCode::Char('q'))).await);
+    });
+}

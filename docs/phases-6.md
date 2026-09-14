@@ -23,16 +23,20 @@ Full TUI: sidebar, conversation, composer, status bar, command palette, keyboard
 | `j/k`, `Ctrl+n`/`Ctrl+p` | Move in chat list | Bound (`map_key`, folded by `apply_action`) |
 | `Enter` | Open selected chat | Bound (`map_key`) |
 | `Ctrl+K`, `/` | Command palette / search | Bound (`map_key`, `Palette::filter`) |
-| Type + `Enter` | Compose and send | Model ready (`Composer`, `MessageConfirmed`) |
+| Type + `Enter` | Compose and send | Wired (`i` enters mode, type, `Enter` submits, `Esc` abandons; `handle_submit` optimistic cycle) |
 | `Ctrl+Q` | Quit | Bound (terminates scripted stream) |
 | Unmapped keys | Ignored, never panic | Tested |
 
-## Live event loop (`feat/tui-event-loop`)
+## Live event loop (`feat/tui-event-loop`, `feat/tui-compose-send`)
 
 - `fold_actions`: pure action fold, quit-terminating, tested.
 - `run_live`: 100ms crossterm poll tick (shutdown/paint stay responsive),
   key-press filter, fold, re-render; acquire/restore + panic hook inside, so
   every exit path leaves the terminal usable.
+- `LiveServices::step`: compose mode (`i`), printable capture, `Backspace`,
+  `Enter` submit via `handle_submit` against the selected chat (no selection =
+  stay composing), `Esc` abandon, `Ctrl+Q` quits from any mode, send errors
+  recorded on `last_error` for future status rendering.
 - Live TTY behavior is manual-verification only — never asserted in CI.
 
 ## Accessibility sign-off (MVP gate, re-verified)

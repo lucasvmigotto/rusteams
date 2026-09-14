@@ -144,6 +144,8 @@ pub fn apply_action(state: &mut AppState, action: KeyAction) -> bool {
         }
         KeyAction::Open => false,
         KeyAction::Palette => false,
+        // Compose mode is owned by LiveServices::step; the pure fold ignores it.
+        KeyAction::Compose => false,
     }
 }
 
