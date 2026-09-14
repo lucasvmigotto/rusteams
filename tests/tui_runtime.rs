@@ -67,6 +67,8 @@ fn actions_move_selection_and_quit_stops() {
     let mut s = AppState::default();
     s.chats = vec![chat("c1", "A"), chat("c2", "B")];
     assert!(!apply_action(&mut s, KeyAction::NextChat));
+    assert_eq!(s.selected_chat.as_deref(), Some("c1"));
+    assert!(!apply_action(&mut s, KeyAction::NextChat));
     assert_eq!(s.selected_chat.as_deref(), Some("c2"));
     assert!(!apply_action(&mut s, KeyAction::PrevChat));
     assert_eq!(s.selected_chat.as_deref(), Some("c1"));
