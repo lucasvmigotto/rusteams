@@ -19,6 +19,8 @@
 - Offline suites: unit + contract + property tests, `MockTeamsProvider`
 - Read-only TUI panes (sidebar, conversation, status bar) with TestBackend
   snapshot tests — not yet wired to live state
+- Composer buffer + palette filter models, optimistic-send reducer flow
+  (`MessageSent` → `MessageConfirmed`) — event-loop keybindings pending
 - Polling sync engine (`Poller` + watermarks, chaos-drilled) — near-real-time
   only; this client never claims push latency
 
