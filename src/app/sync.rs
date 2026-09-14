@@ -34,6 +34,12 @@ impl Watermarks {
             None => true,
         }
     }
+
+    /// Forget all watermarks so every chat re-baselines on the next tick.
+    /// Call this on reconnect: gaps heal via complete-fetch diffs.
+    pub fn reset(&mut self) {
+        self.last_poll.clear();
+    }
 }
 
 /// Polls one provider into shared app state. Cheap to clone per task.
@@ -66,6 +72,35 @@ impl<P: ChatProvider> Poller<P> {
         }
         Ok(state.apply(Command::SyncDiffApplied { chat_id: chat_id.into(), changed, deleted }))
     }
+}
+
+/// Sweep the chat list into state. Returns the replace event (single item).
+pub async fn refresh_chats<P: ChatProvider>(
+    state: &mut AppState,
+    provider: &P,
+) -> Result<Vec<Event>, AppError> {
+    let chats = provider.list_chats().await?;
+    Ok(state.apply(Command::ChatsLoaded { chats }))
+}
+
+/// One scheduler tick: poll the selected chat when its watermark is due.
+/// Marks success only — throttled/failed polls stay due for the next tick.
+pub async fn poll_due_chats<P: ChatProvider>(
+    state: &mut AppState,
+    poller: &Poller<P>,
+    marks: &mut Watermarks,
+    interval: Duration,
+) -> Result<Vec<Event>, AppError> {
+    let selected = match state.selected_chat.clone() {
+        Some(id) => id,
+        None => return Ok(vec![]),
+    };
+    if !marks.is_due(&selected, interval) {
+        return Ok(vec![]);
+    }
+    let events = poller.poll_once(state, &selected).await?;
+    marks.mark_synced(&selected);
+    Ok(events)
 }
 
 #[cfg(test)]
