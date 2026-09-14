@@ -3,6 +3,22 @@
 All notable changes are documented here. Format follows Keep a Changelog; versioning
 is SemVer with `MVP ≠ 1.0.0`.
 
+## [0.2.0] — 2026-09-14 (MVP core gate)
+
+### Added
+- Everything in 0.1.0, plus: message search, message ops (edit/delete/reactions
+  with contract C7–C9), silent refresh with rotation, polling sync loop
+  (sweeper, due-tick, reconnect re-baselining, chaos drills), TUI read panes,
+  composer/palette models, key map with scripted harness, terminal lifecycle,
+  perf smoke tests (10k render ~17ms, order ~218µs debug), ARM64 CI job.
+- Docs: as-built phases 2–6 slices, ADRs 005/006 finalized, Entra setup guide,
+  accessibility sign-off (screen-reader pass explicitly pending).
+
+### Known gaps (not claimed)
+- Live tenant verification of login/refresh/Graph calls.
+- Live terminal event loop and timer-driven sync.
+- Screen-reader end-to-end pass.
+
 ## [Unreleased] — Phase 1: core domain and application architecture
 
 ### Added
