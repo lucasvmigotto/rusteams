@@ -5,8 +5,7 @@
 
 use async_trait::async_trait;
 use rusteams::app::{
-    AppState, Command, Poller, Shutdown, Watermarks, note_connection, poll_due_chats,
-    refresh_chats,
+    AppState, Command, Poller, Shutdown, Watermarks, note_connection, poll_due_chats, refresh_chats,
 };
 use rusteams::app::{app_state::ConnectionState, connection::ConnectionEvent};
 use rusteams::domain::{Chat, ChatMessage};
