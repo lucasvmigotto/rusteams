@@ -2,9 +2,13 @@ pub mod commands;
 
 use crate::config::AppConfig;
 use crate::error::AppError;
+use crate::infra::auth::DeviceCodeClient;
 use crate::infra::auth::token_store::{KeyringStore, SecretStore};
 use clap::Parser;
 use commands::{Cli, Commands};
+
+/// Microsoft Entra authority for production sign-in.
+pub const ENTRA_AUTHORITY: &str = "https://login.microsoftonline.com";
 
 pub async fn run() -> Result<(), AppError> {
     crate::telemetry::init();
@@ -42,10 +46,14 @@ pub async fn run() -> Result<(), AppError> {
             Ok(())
         }
         Some(Commands::Login) => {
-            println!("Login uses device-code flow (Phase 2).");
-            println!("1. Register a public-client app in Entra ID.");
-            println!("2. Set RUSTEAMS_CLIENT_ID and run `rusteams login` again once implemented.");
-            Ok(())
+            let client_id = cfg.client_id.clone().ok_or_else(|| {
+                AppError::Config(
+                    "client-id is not set; register a public-client app in Entra ID, \
+                     then set RUSTEAMS_CLIENT_ID or --client-id"
+                        .into(),
+                )
+            })?;
+            login(&cfg.tenant_id, &client_id).await
         }
         Some(Commands::Doctor) => {
             println!("doctor: config file: {:?}", AppConfig::default_path());
@@ -55,5 +63,24 @@ pub async fn run() -> Result<(), AppError> {
             );
             Ok(())
         }
+    }
+}
+
+/// Run the device-code login: print the user code, poll Entra, persist the
+/// refresh token in the OS keyring. Access tokens stay in memory only.
+async fn login(tenant: &str, client_id: &str) -> Result<(), AppError> {
+    let client = DeviceCodeClient::new(ENTRA_AUTHORITY, tenant, client_id);
+    let code = client.request_code(&DeviceCodeClient::scopes()).await?;
+    // The message comes from Entra and contains the code + verification URL.
+    // It is display text, not a secret — but sanitize defensively anyway.
+    println!("{}", crate::sanitize::sanitize(&code.message));
+    let token = client.poll_for_token(&code, 60).await?;
+    match token.refresh_token {
+        Some(rt) => {
+            KeyringStore::new("rusteams").save_refresh_token("default", &rt)?;
+            println!("Logged in: refresh token stored in OS keyring.");
+            Ok(())
+        }
+        None => Err(AppError::Auth("no refresh token issued".into())),
     }
 }
