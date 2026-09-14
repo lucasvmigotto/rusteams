@@ -17,7 +17,7 @@ fn package_version_is_present_and_semver_shaped() {
 
 #[test]
 fn status_bar_carries_the_package_version() {
-    let view = build_read_view(&AppState::default());
+    let view = build_read_view(&AppState::default(), None);
     let expected = format!("rusteams {}", env!("CARGO_PKG_VERSION"));
     assert!(
         view.status.contains(&expected),
