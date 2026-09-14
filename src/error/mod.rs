@@ -18,6 +18,9 @@ pub enum AppError {
     /// Unit struct — nothing secret can ever be attached.
     #[error("shutting down")]
     Shutdown,
+    /// Terminal setup/render failure. Carries short OS context only.
+    #[error("terminal error: {0}")]
+    Terminal(String),
 }
 
 impl AppError {
