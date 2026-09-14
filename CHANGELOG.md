@@ -22,6 +22,8 @@ is SemVer with `MVP ≠ 1.0.0`.
 - Message adapter: `list_messages`/`send_message` with sanitizing DTO mapping,
   presence read, provider-trait binding.
 - Read-only TUI panes with snapshot tests; keyboard map stubbed for composer phase.
+- Polling sync: per-chat `Poller` with watermark scheduling, chaos drills for
+  duplicate/reordered pages, shutdown fail-fast.
 
 ## [0.1.0] — 2026-09-14 (Phase 0 scaffold)
 

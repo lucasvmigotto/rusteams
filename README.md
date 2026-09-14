@@ -19,6 +19,8 @@
 - Offline suites: unit + contract + property tests, `MockTeamsProvider`
 - Read-only TUI panes (sidebar, conversation, status bar) with TestBackend
   snapshot tests — not yet wired to live state
+- Polling sync engine (`Poller` + watermarks, chaos-drilled) — near-real-time
+  only; this client never claims push latency
 
 ## What does NOT work yet
 
