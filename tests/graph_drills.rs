@@ -327,8 +327,8 @@ async fn drill_mention_maps_to_at_name_and_mention() {
 
 #[tokio::test]
 async fn drill_incremental_poll_uses_filter_and_top() {
-    use wiremock::matchers::{method, path_regex, query_param};
     use chrono::{TimeZone, Utc};
+    use wiremock::matchers::{method, path_regex, query_param};
 
     let server = MockServer::start().await;
     Mock::given(method("GET"))
@@ -343,8 +343,7 @@ async fn drill_incremental_poll_uses_filter_and_top() {
 
     let client = GraphClient::new(&server.uri(), "test-token");
     let since = Utc.timestamp_opt(1_789_380_000, 0).unwrap();
-    let msgs =
-        client.list_messages_since("c1", since, 25).await.expect("drill: incremental works");
+    let msgs = client.list_messages_since("c1", since, 25).await.expect("drill: incremental works");
     assert_eq!(msgs.len(), 1);
     assert_eq!(msgs[0].id, "m2");
 }
