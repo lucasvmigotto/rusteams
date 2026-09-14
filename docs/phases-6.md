@@ -27,7 +27,13 @@ Full TUI: sidebar, conversation, composer, status bar, command palette, keyboard
 | `Ctrl+Q` | Quit | Bound (terminates scripted stream) |
 | Unmapped keys | Ignored, never panic | Tested |
 
-Remaining: live crossterm event feed into the same fold (runtime loop).
+## Live event loop (`feat/tui-event-loop`)
+
+- `fold_actions`: pure action fold, quit-terminating, tested.
+- `run_live`: 100ms crossterm poll tick (shutdown/paint stay responsive),
+  key-press filter, fold, re-render; acquire/restore + panic hook inside, so
+  every exit path leaves the terminal usable.
+- Live TTY behavior is manual-verification only — never asserted in CI.
 
 ## Accessibility sign-off (MVP gate, re-verified)
 
