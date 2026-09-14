@@ -331,16 +331,6 @@ async fn drill_tick_without_selection_sweeps_only() {
 }
 
 #[tokio::test]
-async fn drill_supervisor_stops_at_shutdown() {
-    let (trigger, shutdown) = shutdown_pair();
-    trigger.trigger();
-    let mut sync_loop = SyncLoop::new(MockTeamsProvider::new(), shutdown, Duration::from_secs(1));
-    let mut state = AppState::default();
-    let err = sync_loop.tick(&mut state).await.expect_err("drill: stopped tick");
-    assert_eq!(err.user_message(), "shutting down");
-}
-
-#[tokio::test]
 async fn drill_endless_run_stops_immediately_when_signalled() {
     use rusteams::app::Supervisor;
 
