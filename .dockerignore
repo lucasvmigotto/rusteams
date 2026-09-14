@@ -1,0 +1,15 @@
+# Keep the build context minimal: only what Dockerfile COPY needs.
+target/
+.git/
+.gitignore
+.devcontainer/
+.vscode/
+.idea/
+*.md
+docs/
+tests/
+benches/
+examples/
+scripts/
+# NOTE: dist/ is intentionally NOT ignored — CI stages verified release
+# binaries there before `docker build`.

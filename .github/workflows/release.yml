@@ -1,0 +1,218 @@
+name: release
+
+# Production publishing: trusted main-branch execution only.
+# PRs use ci.yml and must never publish artifacts, images, or tags.
+on:
+  push:
+    branches: [main]
+
+# Serialize main-branch releases: two rapid pushes must not mint the same
+# version twice. Second run waits; duplicate-version detection fails it safely.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+# Default deny-all; each job declares exactly what it needs.
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_TOOLCHAIN: "1.89.0"
+
+jobs:
+  quality:
+    name: quality gates (no secrets)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - run: cargo check --all-targets --all-features
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo test --all-targets --all-features
+      - name: Install audit tooling
+        run: cargo install cargo-audit cargo-deny --locked
+      - run: cargo audit
+      - run: cargo deny check
+
+  build:
+    name: release build (${{ matrix.target }})
+    needs: quality
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            runs-on: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            runs-on: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.target }}
+      - name: Extract version (Cargo source of truth)
+        id: version
+        run: |
+          VERSION="$(bash scripts/ci/extract-version.sh)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Cargo.toml version: $VERSION"
+      - name: Build release binary
+        run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Assemble dist layout
+        run: |
+          DIST="dist"
+          BIN="rusteams-${{ steps.version.outputs.version }}-${{ matrix.target }}"
+          mkdir -p "$DIST"
+          cp "target/${{ matrix.target }}/release/rusteams" "$DIST/$BIN"
+          chmod +x "$DIST/$BIN"
+          printf '%s\n' "${{ steps.version.outputs.version }}" > "$DIST/VERSION"
+          {
+            echo "commit=${{ github.sha }}"
+            echo "target=${{ matrix.target }}"
+            echo "rustc=${{ env.RUST_TOOLCHAIN }}"
+            echo "built=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > "$DIST/BUILD-METADATA"
+          (cd "$DIST" && sha256sum "$BIN" VERSION BUILD-METADATA > SHASUMS)
+          cat "$DIST/SHASUMS"
+      - name: Version consistency (binary reports Cargo version)
+        # Native runner per leg, so executing the just-built binary is valid.
+        run: |
+          BIN="dist/rusteams-${{ steps.version.outputs.version }}-${{ matrix.target }}"
+          OUT="$("./$BIN" version)"
+          echo "$OUT"
+          echo "$OUT" | grep -q "${{ steps.version.outputs.version }}" \
+            || { echo "binary version mismatch: $OUT"; exit 1; }
+          (cd dist && sha256sum -c SHASUMS)
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dist-${{ matrix.target }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+
+  docker:
+    name: hardened image (amd64+arm64, dual registry)
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      DH_REPO: lucasvmigotto/rusteams
+      GHCR_REPO: ghcr.io/lucasvmigotto/rusteams
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract version (Cargo source of truth)
+        id: version
+        run: |
+          VERSION="$(bash scripts/ci/extract-version.sh)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Fetch verified build artifacts (no recompilation)
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-dist-*
+          path: artifacts/
+      - name: Verify per-leg SHASUMS before packaging
+        run: |
+          (cd artifacts/release-dist-x86_64-unknown-linux-gnu && sha256sum -c SHASUMS)
+          (cd artifacts/release-dist-aarch64-unknown-linux-gnu && sha256sum -c SHASUMS)
+      - name: Stage per-arch dist layout for the image
+        run: |
+          mkdir -p dist/linux-amd64 dist/linux-arm64
+          cp artifacts/release-dist-x86_64-unknown-linux-gnu/rusteams-* dist/linux-amd64/rusteams
+          cp artifacts/release-dist-aarch64-unknown-linux-gnu/rusteams-* dist/linux-arm64/rusteams
+          chmod +x dist/linux-amd64/rusteams dist/linux-arm64/rusteams
+          cp artifacts/release-dist-x86_64-unknown-linux-gnu/VERSION dist/VERSION
+          cat artifacts/release-dist-*/BUILD-METADATA > dist/BUILD-METADATA
+          (cd dist && sha256sum linux-amd64/rusteams linux-arm64/rusteams VERSION BUILD-METADATA > SHASUMS)
+          cat dist/SHASUMS
+      - uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PAT }}
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push (bare X.Y.Z tags only, no latest)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.DH_REPO }}:${{ steps.version.outputs.version }}
+            ${{ env.GHCR_REPO }}:${{ steps.version.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=rusteams
+            org.opencontainers.image.description=Terminal client for Microsoft Teams
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=https://github.com/lucasvmigotto/rusteams
+            org.opencontainers.image.licenses=GPL-3.0-or-later
+          build-args: |
+            RUSTEAMS_VERSION=${{ steps.version.outputs.version }}
+      - name: Trivy scan (warn-only; fail-gate is future work)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.DH_REPO }}:${{ steps.version.outputs.version }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+      - name: Upload Trivy SARIF
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-sarif
+          path: trivy-results.sarif
+          retention-days: 30
+
+  tag:
+    name: create bare X.Y.Z tag
+    needs: [build, docker]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Extract version (Cargo source of truth)
+        id: version
+        run: |
+          VERSION="$(bash scripts/ci/extract-version.sh)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Fail safe if tag already exists (never move tags)
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if git ls-remote origin "refs/tags/$VERSION" | grep -q .; then
+            echo "Git tag $VERSION already exists." >&2
+            exit 1
+          fi
+          echo "Tag $VERSION is absent; creating."
+      - name: Create and push tag on the built commit
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git tag -a "$VERSION" -m "rusteams $VERSION" "${{ github.sha }}"
+          git push origin "refs/tags/$VERSION"
