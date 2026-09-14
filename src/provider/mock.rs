@@ -82,6 +82,9 @@ impl ChatProvider for MockTeamsProvider {
             sender: "me".into(),
             body: crate::sanitize::sanitize(body),
             reply_to_id: None,
+            reactions: vec![],
+            mentions: vec![],
+            is_read: true,
         };
         self.messages.lock().unwrap().entry(chat_id.into()).or_default().push(m.clone());
         Ok(m)
