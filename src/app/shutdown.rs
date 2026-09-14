@@ -126,6 +126,7 @@ mod tests {
             reactions: vec![],
             mentions: vec![],
             is_read: false,
+            segments: vec![],
         };
         state.apply(Command::MessageReceived { message: mk("m2") });
         trigger.trigger(); // sync task would stop here

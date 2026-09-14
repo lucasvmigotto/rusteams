@@ -23,7 +23,9 @@ fn code_block_preserves_lines() {
     let segs = render_html_body("<pre><code>fn main() {\n    println!();\n}</code></pre>");
     assert_eq!(
         segs,
-        vec![RichSegment::CodeBlock { lines: vec!["fn main() {".into(), "    println!();".into(), "}".into()] }]
+        vec![RichSegment::CodeBlock {
+            lines: vec!["fn main() {".into(), "    println!();".into(), "}".into()]
+        }]
     );
 }
 

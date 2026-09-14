@@ -25,6 +25,11 @@ pub struct ChatMessage {
     /// Whether the signed-in user has read this message.
     #[serde(default)]
     pub is_read: bool,
+    /// Rich segments backing `body`, when the source was HTML. Empty for
+    /// plain-text messages; renderers may highlight from these, with `body`
+    /// as the always-available plain fallback.
+    #[serde(default)]
+    pub segments: Vec<RichSegment>,
 }
 
 /// A normalized reaction (e.g. like, heart) from one user.
@@ -42,6 +47,26 @@ pub struct Mention {
     pub display_name: String,
     pub offset: usize,
     pub length: usize,
+}
+
+/// One rendered rich-text segment. Plain data — styling decisions belong to
+/// the TUI layer, which falls back to `ChatMessage::body` when empty.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RichSegment {
+    Text(String),
+    Link { text: String, url: String },
+    CodeBlock { lines: Vec<String> },
+}
+
+impl RichSegment {
+    /// Flatten to plain text: links show `text (url)`, code joins lines.
+    pub fn plain(&self) -> String {
+        match self {
+            RichSegment::Text(t) => t.clone(),
+            RichSegment::Link { text, url } => format!("{text} ({url})"),
+            RichSegment::CodeBlock { lines } => lines.join("\n"),
+        }
+    }
 }
 
 /// Sort messages oldest-first; tie-break on id for determinism.
@@ -116,6 +141,7 @@ mod tests {
             reactions: vec![],
             mentions: vec![],
             is_read: false,
+            segments: vec![],
         }
     }
 
