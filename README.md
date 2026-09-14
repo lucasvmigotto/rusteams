@@ -57,6 +57,7 @@ is not wired yet — `rusteams` without a subcommand still prints guidance.
 ## Documentation
 
 - `docs/phases-0.md` … `docs/phases-7.md` — roadmap (Phase 0 detailed, later phases strategic)
+- `docs/development/live-verification.md` — manual TTY/tenant/screen-reader runbooks
 - `docs/architecture/` — ADRs
 - `docs/security/` — threat model, auth, terminal security
 - `SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`
