@@ -21,6 +21,8 @@ pub struct GraphClient {
 #[derive(Debug, Deserialize)]
 struct Envelope<T> {
     value: Vec<T>,
+    #[serde(rename = "@odata.nextLink", default)]
+    next_link: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -73,30 +75,38 @@ impl GraphClient {
         }
     }
 
-    /// List the signed-in user's chats (`GET /me/chats`).
+    /// List the signed-in user's chats (`GET /me/chats`), following
+    /// `@odata.nextLink` pages (bounded to 20 pages against runaway servers).
     pub async fn list_chats(&self) -> Result<Vec<Chat>, AppError> {
-        let url = chats_url(&self.base);
-        let resp = self.get(&url).await?;
-        let status = resp.status().as_u16();
-        if status == 401 {
-            return Err(AppError::Auth("graph rejected credentials".into()));
-        }
-        if !(200..300).contains(&status) {
-            return Err(AppError::Network(format!("graph HTTP {status}")));
-        }
-        let env: Envelope<ChatDto> =
-            resp.json().await.map_err(|_| AppError::Provider("malformed graph response".into()))?;
-        Ok(env
-            .value
-            .into_iter()
-            .map(|c| Chat {
+        let mut out = Vec::new();
+        let mut url = Some(chats_url(&self.base));
+        for _ in 0..20 {
+            let next = match url {
+                Some(u) => u,
+                None => break,
+            };
+            let resp = self.get(&next).await?;
+            let status = resp.status().as_u16();
+            if status == 401 {
+                return Err(AppError::Auth("graph rejected credentials".into()));
+            }
+            if !(200..300).contains(&status) {
+                return Err(AppError::Network(format!("graph HTTP {status}")));
+            }
+            let env: Envelope<ChatDto> = resp
+                .json()
+                .await
+                .map_err(|_| AppError::Provider("malformed graph response".into()))?;
+            out.extend(env.value.into_iter().map(|c| Chat {
                 id: c.id,
                 topic: c.topic.map(|t| crate::sanitize::sanitize(&t)),
                 last_message_preview: None,
                 last_message_at: None,
                 unread: false,
-            })
-            .collect())
+            }));
+            url = env.next_link;
+        }
+        Ok(out)
     }
 }
 
