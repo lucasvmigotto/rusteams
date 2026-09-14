@@ -2,9 +2,10 @@
 
 **Terminal user interface (TUI) client for Microsoft Teams** — via official Microsoft Graph APIs.
 
-> Status: **Phase 1 core + device-code login (unreleased)**. Live chat data,
-> TUI, and realtime polling are under construction. This README documents only
-> what exists today.
+> Status: **MVP core (unreleased, v0.2.0)** — domain, sync engine, adapter
+> drills, auth flow, and TUI models are implemented and tested. Live terminal
+> loop, live tenant verification, and realtime timer integration remain. This
+> README documents only what exists today.
 
 ## What works today
 
