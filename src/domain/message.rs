@@ -45,6 +45,8 @@ pub struct Mention {
 }
 
 /// Sort messages oldest-first; tie-break on id for determinism.
+/// Total and deterministic for inputs with unique ids (the Graph invariant);
+/// resolve duplicates with [`dedupe_messages`] first.
 pub fn order_messages(msgs: &mut [ChatMessage]) {
     msgs.sort_by(|a, b| a.created.cmp(&b.created).then_with(|| a.id.cmp(&b.id)));
 }

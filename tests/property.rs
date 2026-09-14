@@ -8,6 +8,33 @@ use proptest::prelude::*;
 use rusteams::domain::{ChatMessage, build_threads, dedupe_messages, diff_sync, order_messages};
 use rusteams::sanitize::sanitize;
 
+/// Graph invariant: message ids are unique. The generator assigns positional
+/// ids so ordering tests exercise permutation-invariance, not duplicate
+/// handling (duplicates belong to `dedupe_messages`, tested separately).
+fn arb_unique_messages() -> impl Strategy<Value = Vec<ChatMessage>> {
+    proptest::collection::vec((0..1000i64, proptest::option::of(0..8u8)), 0..20).prop_map(|pairs| {
+        pairs
+            .into_iter()
+            .enumerate()
+            .map(|(i, (secs, reply))| {
+                let t = Utc.timestamp_opt(secs, 0).unwrap();
+                ChatMessage {
+                    id: format!("m{i}"),
+                    chat_id: "c1".into(),
+                    created: t,
+                    modified: t,
+                    sender: "alice".into(),
+                    body: "hi".into(),
+                    reply_to_id: reply.map(|r| format!("m{r}")),
+                    reactions: vec![],
+                    mentions: vec![],
+                    is_read: false,
+                }
+            })
+            .collect()
+    })
+}
+
 fn arb_message() -> impl Strategy<Value = ChatMessage> {
     (0..8u8, 0..1000i64, proptest::option::of(0..8u8)).prop_map(|(id, secs, reply)| {
         let t = Utc.timestamp_opt(secs, 0).unwrap();
@@ -48,7 +75,7 @@ proptest! {
     }
 
     #[test]
-    fn ordering_is_idempotent_and_total(msgs in proptest::collection::vec(arb_message(), 0..20)) {
+    fn ordering_is_idempotent_and_total(msgs in arb_unique_messages()) {
         let mut a = msgs.clone();
         order_messages(&mut a);
         let mut b = a.clone();
