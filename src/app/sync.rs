@@ -7,8 +7,10 @@
 //! reordering collapse in `diff_sync`/`order_messages`; gaps heal on the next
 //! complete fetch (watermark re-baselining). Honors `Shutdown` fail-fast.
 
+use super::connection::ConnectionEvent;
 use super::reducer::{AppState, Command, Event};
 use super::shutdown::Shutdown;
+use crate::app::app_state::ConnectionState;
 use crate::domain::diff_sync;
 use crate::error::AppError;
 use crate::provider::ChatProvider;
@@ -101,6 +103,21 @@ pub async fn poll_due_chats<P: ChatProvider>(
     let events = poller.poll_once(state, &selected).await?;
     marks.mark_synced(&selected);
     Ok(events)
+}
+
+/// Bind connection events to sync state: drive the reducer, and when the
+/// machine lands on `Reconnecting`, clear watermarks so the next ticks
+/// re-baseline every chat with complete-fetch diffs (gap healing).
+pub fn note_connection(
+    state: &mut AppState,
+    marks: &mut Watermarks,
+    ev: ConnectionEvent,
+) -> Vec<Event> {
+    let events = state.apply(Command::ConnectionEvent(ev));
+    if state.connection == ConnectionState::Reconnecting {
+        marks.reset();
+    }
+    events
 }
 
 #[cfg(test)]
