@@ -27,6 +27,8 @@ is SemVer with `MVP ≠ 1.0.0`.
 - Composer buffer + palette filter; optimistic-send confirm flow in the reducer;
   keyboard map and accessibility notes started.
 - Bound key-to-command map (Vim + Emacs) with scripted event-loop harness.
+- TUI runtime wiring: terminal acquire/restore lifecycle, `ReadView` assembly,
+  action folding, `AppError::Terminal`.
 
 ## [0.1.0] — 2026-09-14 (Phase 0 scaffold)
 

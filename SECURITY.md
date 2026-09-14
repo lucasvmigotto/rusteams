@@ -23,3 +23,6 @@ credential-store bypass until a fix is available.
 - No telemetry leaves the machine. Logs redact `Bearer` material.
 - Personal Microsoft accounts are unsupported by the underlying APIs; the app
   must fail closed with an honest message rather than pretend to work.
+- Terminal takeover is always reversible: acquire fails closed without a TTY,
+  restore runs best-effort on exit, shutdown, and panics (panic hook), so the
+  user's shell is never left in raw/alternate-screen mode by our code paths.
