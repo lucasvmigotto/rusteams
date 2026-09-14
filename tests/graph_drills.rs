@@ -71,3 +71,26 @@ async fn drill_follows_next_link_pages() {
     let ids: Vec<&str> = chats.iter().map(|c| c.id.as_str()).collect();
     assert_eq!(ids, vec!["chat-1", "chat-2"]);
 }
+
+#[tokio::test]
+async fn drill_rejects_unauthorized_without_retry() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET")).respond_with(ResponseTemplate::new(401)).mount(&server).await;
+
+    let client = GraphClient::new(&server.uri(), "bad-token");
+    let err = client.list_chats().await.expect_err("drill: 401 fails");
+    assert_eq!(err.user_message(), "authentication failed");
+}
+
+#[tokio::test]
+async fn drill_rejects_malformed_payload() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_string("not json{{"))
+        .mount(&server)
+        .await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    let err = client.list_chats().await.expect_err("drill: garbage fails");
+    assert!(err.to_string().contains("malformed"));
+}
