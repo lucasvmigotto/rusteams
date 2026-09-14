@@ -6,4 +6,6 @@ pub mod shutdown;
 pub mod sync;
 pub use reducer::{AppState, Command, Event};
 pub use shutdown::{DropGuard, Shutdown, ShutdownTrigger};
-pub use sync::{Poller, SyncLoop, Watermarks, note_connection, poll_due_chats, refresh_chats};
+pub use sync::{
+    Poller, Supervisor, SyncLoop, Watermarks, note_connection, poll_due_chats, refresh_chats,
+};
