@@ -410,7 +410,13 @@ async fn drill_send_file_reference_posts_attachment_payload() {
 
     let client = GraphClient::new(&server.uri(), "test-token");
     let msg = client
-        .send_file_reference("chat-1", "budget ", "aid-1", "Budget.docx", "https://example.sharepoint.com/x.docx")
+        .send_file_reference(
+            "chat-1",
+            "budget ",
+            "aid-1",
+            "Budget.docx",
+            "https://example.sharepoint.com/x.docx",
+        )
         .await
         .expect("drill: attach works");
     assert_eq!(msg.id, "m10");
