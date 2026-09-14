@@ -5,23 +5,33 @@
 Full TUI: sidebar, conversation, composer, status bar, command palette, keyboard
 (Vim + Emacs), accessibility, resilience, large-conversation performance.
 
-## Delivered so far (`feat/tui-read`)
+## Delivered so far (`feat/tui-read`, `feat/tui-compose`)
 
 - Read-only panes (`ReadView` → header/sidebar/conversation/status) over plain
   view data — no provider/network coupling; TestBackend snapshot tests.
 - Empty states render hints; narrow terminals (20×8) render without panic.
 - Connection state shown in header; status bar reserved for key hints.
+- Composer buffer (Unicode-safe edit, blank-submit rejection) and
+  case-insensitive palette filter as pure models with unit tests.
+- Optimistic send flow: `MessageSent(temp)` → `MessageConfirmed(temp_id, real)`
+  swaps the temp entry; missing temp appends (restart-safe).
 
-## Keyboard map (stub — bindings land with `feat/tui-compose`)
+## Keyboard map (models ready; event-loop bindings pending)
 
-| Keys | Action |
-|---|---|
-| `j/k`, `Ctrl+n`/`Ctrl+p` | Move in chat list (planned) |
-| `Enter` | Open selected chat (planned) |
-| `/`, `Ctrl+K` | Search / command palette (planned) |
-| `Ctrl+Q` | Quit (planned) |
+| Keys | Action | State |
+|---|---|---|
+| `j/k`, `Ctrl+n`/`Ctrl+p` | Move in chat list | Planned |
+| `Enter` | Open selected chat | Planned |
+| `Ctrl+K`, `/` | Command palette / search | Model ready (`Palette::filter`) |
+| Type + `Enter` | Compose and send | Model ready (`Composer`, `MessageConfirmed`) |
+| `Ctrl+Q` | Quit | Planned |
 
-Vim + Emacs navigation both planned; no key is bound yet.
+## Accessibility notes (tracked, verified where testable)
+
+- Meaning never conveyed by color alone (selection uses `●` marker + text).
+- Empty/degraded states always expose text hints (snapshot-tested).
+- Narrow-terminal (20×8) smoke test guards resize crashes.
+- Screen-reader and full keyboard-only operation pending event-loop wiring.
 
 ## Scope
 
