@@ -39,6 +39,10 @@ rusteams doctor   # keyring reachable: true
 rusteams logout   # clears the keyring entry
 ```
 
+Sessions renew silently: the stored refresh token is exchanged for fresh access
+tokens (rotated replacements persist back to the keyring); an empty or rejected
+session fails closed and points back to `rusteams login`.
+
 ## 4. Troubleshooting
 
 - `client-id is not set` → export `RUSTEAMS_CLIENT_ID` first.
