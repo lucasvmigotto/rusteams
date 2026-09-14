@@ -50,6 +50,18 @@ pub struct Poller<P> {
     shutdown: Shutdown,
 }
 
+impl<P> Poller<P> {
+    /// Borrow the backing provider (sweeps share the same source of truth).
+    pub fn provider(&self) -> &P {
+        &self.provider
+    }
+
+    /// True once the shared shutdown fired.
+    pub fn shutdown_triggered(&self) -> bool {
+        self.shutdown.is_triggered()
+    }
+}
+
 impl<P: ChatProvider> Poller<P> {
     pub fn new(provider: P, shutdown: Shutdown) -> Self {
         Self { provider, shutdown }
@@ -118,6 +130,33 @@ pub fn note_connection(
         marks.reset();
     }
     events
+}
+
+/// Timer-driven sync loop: one scheduler owning poller, watermarks, and
+/// interval. `tick` sweeps the chat list, then polls the selected chat when
+/// due. Throttled/failed ticks stay due — the loop never hammers the provider.
+/// The sleeping supervisor (interval sleep + shutdown select) lives with the
+/// runtime; this type is the testable scheduling core.
+pub struct SyncLoop<P> {
+    poller: Poller<P>,
+    marks: Watermarks,
+    interval: Duration,
+}
+
+impl<P: ChatProvider> SyncLoop<P> {
+    pub fn new(provider: P, shutdown: Shutdown, interval: Duration) -> Self {
+        Self { poller: Poller::new(provider, shutdown), marks: Watermarks::default(), interval }
+    }
+
+    /// One scheduler iteration. Fails fast on shutdown without touching state.
+    pub async fn tick(&mut self, state: &mut AppState) -> Result<Vec<Event>, AppError> {
+        if self.poller.shutdown_triggered() {
+            return Err(AppError::Shutdown);
+        }
+        let mut events = refresh_chats(state, self.poller.provider()).await?;
+        events.extend(poll_due_chats(state, &self.poller, &mut self.marks, self.interval).await?);
+        Ok(events)
+    }
 }
 
 #[cfg(test)]
