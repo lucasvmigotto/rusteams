@@ -5,6 +5,83 @@
 //! Phase-0 contract: URL builders + error classification are pure and tested.
 //! Live HTTP calls land in Phase 3 behind `TeamsProvider`.
 
+use crate::domain::Chat;
+use crate::error::AppError;
+use serde::Deserialize;
+
+/// Blocking-free Graph HTTP adapter. Bodies and topics are sanitized at the
+/// boundary; auth failures never blind-retry (see [`classify_status`]).
+#[derive(Debug, Clone)]
+pub struct GraphClient {
+    http: reqwest::Client,
+    base: String,
+    token: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Envelope<T> {
+    value: Vec<T>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ChatDto {
+    id: String,
+    #[serde(default)]
+    topic: Option<String>,
+}
+
+impl GraphClient {
+    pub fn new(base: &str, token: &str) -> Self {
+        Self {
+            http: reqwest::Client::new(),
+            base: base.trim_end_matches('/').to_string(),
+            token: token.to_string(),
+        }
+    }
+
+    fn auth(&self, req: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        req.bearer_auth(&self.token)
+    }
+
+    async fn get(&self, url: &str) -> Result<reqwest::Response, AppError> {
+        self.auth(self.http.get(url))
+            .send()
+            .await
+            .map_err(|e| AppError::Network(safe_network_message(&e)))
+    }
+
+    /// List the signed-in user's chats (`GET /me/chats`).
+    pub async fn list_chats(&self) -> Result<Vec<Chat>, AppError> {
+        let url = chats_url(&self.base);
+        let resp = self.get(&url).await?;
+        let status = resp.status().as_u16();
+        if status == 401 {
+            return Err(AppError::Auth("graph rejected credentials".into()));
+        }
+        if !(200..300).contains(&status) {
+            return Err(AppError::Network(format!("graph HTTP {status}")));
+        }
+        let env: Envelope<ChatDto> =
+            resp.json().await.map_err(|_| AppError::Provider("malformed graph response".into()))?;
+        Ok(env
+            .value
+            .into_iter()
+            .map(|c| Chat {
+                id: c.id,
+                topic: c.topic.map(|t| crate::sanitize::sanitize(&t)),
+                last_message_preview: None,
+                last_message_at: None,
+                unread: false,
+            })
+            .collect())
+    }
+}
+
+/// Network error text without URLs, tokens, or bodies.
+fn safe_network_message(_: &reqwest::Error) -> String {
+    "request failed".into()
+}
+
 /// Throttling / retry classification for Graph HTTP responses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RetryHint {
