@@ -48,9 +48,18 @@ Full TUI: sidebar, conversation, composer, status bar, command palette, keyboard
 - [ ] Screen-reader pass — pending live terminal verification (not claimed)
 - [ ] Full keyboard-only operation end-to-end — pending runtime loop
 
+## Notifications (`feat/tui-notify`)
+
+- `NoticeQueue`: bounded, TTL-expiring, sanitized text notices with per-chat
+  unread flags; `notify_for_message` standard text.
+- Policy: visual-only. No audible bell — the sanitizer strips control
+  characters by design, and unrequested sound is hostile in shared terminals.
+- Future (explicitly not MVP): opt-in bell behind a config flag, default off,
+  with its own security review.
+
 ## Remaining (post-MVP)
 
-- Live crossterm event feed, composer send wiring, notifications, benchmarks.
+- Live crossterm event feed composition, benchmarks.
 
 ## Scope
 
