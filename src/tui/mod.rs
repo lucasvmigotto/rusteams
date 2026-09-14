@@ -7,5 +7,5 @@ pub mod terminal;
 pub use app::{ChatRow, MessageRow, ReadView, apply_action, build_read_view, render_read_view};
 pub use compose::{Composer, Palette};
 pub use keys::{KeyAction, map_key};
-pub use loop_::run_scripted;
+pub use loop_::{fold_actions, run_live, run_scripted};
 pub use terminal::{acquire_terminal, install_panic_hook, restore_terminal};
