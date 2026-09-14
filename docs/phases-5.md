@@ -1,18 +1,22 @@
-# Phase 5 — Real-Time Event Architecture (Polling-First)
-
-Strategic spec.
+# Phase 5 — Real-Time Event Architecture (Polling-First, in progress)
 
 ## Objective
 
 Near-real-time sync without webhooks: poll + diff + reconnect state machine.
 
-## Scope
+## Delivered so far (`feat/realtime-poll`)
 
-- Active-chat poller + list sweeper honoring `Retry-After`, backoff+jitter caps
-- `diff_sync` application, duplicate/out-of-order suppression, resync after gaps
-- Subscription-renewal equivalent: re-baselining watermarks; optional webhook
-  relay design doc (out of MVP scope)
-- Chaos tests: drop/duplicate/reorder injections
+- `Poller`: per-chat full-fetch, `diff_sync` delta, reducer application, quiet
+  steady state, `Shutdown` fail-fast. Chaos drills (duplicate + reversed pages)
+  converge to ordered truth.
+- `Watermarks`: last-success scheduling (`is_due`), i.e. re-baselining primitive.
+- Latency honesty: no push claims anywhere; see README.
+
+## Remaining scope
+
+- List sweeper honoring `Retry-After` + backoff/jitter caps in the poll loop
+- Reconnect-loop binding (`transition()` + poller + `Watermarks` reset)
+- Drop-injection chaos (message loss mid-page) and missed-event recovery demo
 
 ## Non-Goals
 
