@@ -24,6 +24,8 @@ is SemVer with `MVP ≠ 1.0.0`.
 - Read-only TUI panes with snapshot tests; keyboard map stubbed for composer phase.
 - Polling sync: per-chat `Poller` with watermark scheduling, chaos drills for
   duplicate/reordered pages, shutdown fail-fast.
+- Sync loop: chat sweeper, due-gated tick, reconnect watermark re-baselining,
+  drop-heal recovery drills.
 - Composer buffer + palette filter; optimistic-send confirm flow in the reducer;
   keyboard map and accessibility notes started.
 - Bound key-to-command map (Vim + Emacs) with scripted event-loop harness.
