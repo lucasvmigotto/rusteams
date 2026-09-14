@@ -19,13 +19,16 @@ Near-real-time sync without webhooks: poll + diff + reconnect state machine.
 - `SyncLoop` timer core (`feat/sync-timer`): sweep + due-gated poll per tick,
   shutdown fail-fast without touching state, throttled ticks stay due and
   converge on retry. Drilled: sweep-only without selection, throttle→retry.
+- `Supervisor` (`feat/sync-supervisor`): interval sleep between ticks,
+  exponential backoff (capped at the interval) on failed ticks, shutdown stop.
+  Drilled: converge-then-idle, throttle backoff recovery, shutdown fail-fast.
 - Latency honesty: no push claims anywhere; see README.
 
 ## Remaining (live-loop integration, with the runtime)
 
-- Running the tick on a timer inside the supervised task tree (`SyncLoop::tick`
-  is the testable core; the sleeping supervisor binds `Shutdown` + `interval`).
-  Backoff/jitter caps on the schedule (primitives exist: `backoff_delay`, `is_due`).
+- Binding `Supervisor::run` without a tick bound as the endless production
+  task (same code path as the drilled bounded runs); wiring `Shutdown` from
+  SIGINT/quit into the shared signal.
 
 ## Non-Goals
 
