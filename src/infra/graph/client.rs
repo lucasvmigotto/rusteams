@@ -231,6 +231,98 @@ impl GraphClient {
         map_message(chat_id, dto)
     }
 
+    fn message_url(&self, chat_id: &str, message_id: &str) -> String {
+        format!("{}/messages/{message_id}", messages_url(&self.base, chat_id))
+    }
+
+    /// Check a mutation response: 401 → auth, 2xx → ok, else network error.
+    /// Consumes the response; 204 bodies are never parsed.
+    async fn check_mutation(resp: reqwest::Response) -> Result<(), AppError> {
+        let status = resp.status().as_u16();
+        if status == 401 {
+            return Err(AppError::Auth("graph rejected credentials".into()));
+        }
+        if !(200..300).contains(&status) {
+            return Err(AppError::Network(format!("graph HTTP {status}")));
+        }
+        Ok(())
+    }
+
+    /// Edit a message (`PATCH …/messages/{id}`), then re-read it for the
+    /// confirmed state (delegated updates return `204 No Content`).
+    pub async fn update_message(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        body: &str,
+    ) -> Result<ChatMessage, AppError> {
+        let url = self.message_url(chat_id, message_id);
+        let resp = self
+            .auth(self.http.patch(&url))
+            .json(&serde_json::json!({
+                "body": { "contentType": "text", "content": body }
+            }))
+            .send()
+            .await
+            .map_err(|e| AppError::Network(safe_network_message(&e)))?;
+        Self::check_mutation(resp).await?;
+        let dto: MessageDto = self
+            .get(&url)
+            .await?
+            .json()
+            .await
+            .map_err(|_| AppError::Provider("malformed graph response".into()))?;
+        map_message(chat_id, dto)
+    }
+
+    /// Soft-delete a message (`POST …/messages/{id}/softDelete`).
+    pub async fn delete_message(&self, chat_id: &str, message_id: &str) -> Result<(), AppError> {
+        let url = format!("{}/softDelete", self.message_url(chat_id, message_id));
+        let resp = self
+            .auth(self.http.post(&url))
+            .send()
+            .await
+            .map_err(|e| AppError::Network(safe_network_message(&e)))?;
+        Self::check_mutation(resp).await
+    }
+
+    /// Attach a reaction (`POST …/messages/{id}/setReaction`).
+    pub async fn set_reaction(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        kind: &str,
+    ) -> Result<(), AppError> {
+        self.react(chat_id, message_id, kind, "setReaction").await
+    }
+
+    /// Detach a reaction (`POST …/messages/{id}/unsetReaction`).
+    pub async fn unset_reaction(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        kind: &str,
+    ) -> Result<(), AppError> {
+        self.react(chat_id, message_id, kind, "unsetReaction").await
+    }
+
+    async fn react(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        kind: &str,
+        action: &str,
+    ) -> Result<(), AppError> {
+        let url = format!("{}/{action}", self.message_url(chat_id, message_id));
+        let resp = self
+            .auth(self.http.post(&url))
+            .json(&serde_json::json!({ "reactionType": kind }))
+            .send()
+            .await
+            .map_err(|e| AppError::Network(safe_network_message(&e)))?;
+        Self::check_mutation(resp).await
+    }
+
     /// Search the signed-in user's messages (`POST /search/query`,
     /// `entityTypes: ["chatMessage"]`). Returns ranked hits; use
     /// `list_messages`/`chatmessage-get` to hydrate full bodies.
@@ -342,6 +434,37 @@ impl ChatProvider for GraphClient {
 
     async fn send_message(&self, chat_id: &str, body: &str) -> Result<ChatMessage, AppError> {
         GraphClient::send_message(self, chat_id, body).await
+    }
+
+    async fn update_message(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        body: &str,
+    ) -> Result<ChatMessage, AppError> {
+        GraphClient::update_message(self, chat_id, message_id, body).await
+    }
+
+    async fn delete_message(&self, chat_id: &str, message_id: &str) -> Result<(), AppError> {
+        GraphClient::delete_message(self, chat_id, message_id).await
+    }
+
+    async fn set_reaction(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        kind: &str,
+    ) -> Result<(), AppError> {
+        GraphClient::set_reaction(self, chat_id, message_id, kind).await
+    }
+
+    async fn unset_reaction(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        kind: &str,
+    ) -> Result<(), AppError> {
+        GraphClient::unset_reaction(self, chat_id, message_id, kind).await
     }
 }
 

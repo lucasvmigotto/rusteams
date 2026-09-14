@@ -50,6 +50,27 @@ where
     throttle.fail_next_with_throttle();
     let err = throttle.list_chats().await.expect_err("C6: throttled call fails");
     assert!(err.to_string().contains("429"), "C6: throttle is recognizable");
+
+    // C7: edit round-trip updates the stored body.
+    provider
+        .update_message(&chat_id, &sent.id, "contract v2")
+        .await
+        .expect("C7: update_message works");
+    let msgs = provider.list_messages(&chat_id).await.expect("C7: list works");
+    let edited = msgs.iter().find(|m| m.id == sent.id).expect("C7: edited visible");
+    assert_eq!(edited.body, "contract v2", "C7: body updated");
+
+    // C8: reactions attach and detach.
+    provider.set_reaction(&chat_id, &sent.id, "like").await.expect("C8: set_reaction works");
+    let msgs = provider.list_messages(&chat_id).await.expect("C8: list works");
+    let reacted = msgs.iter().find(|m| m.id == sent.id).expect("C8: reacted visible");
+    assert!(reacted.reactions.iter().any(|r| r.kind == "like"), "C8: reaction stored");
+    provider.unset_reaction(&chat_id, &sent.id, "like").await.expect("C8: unset_reaction works");
+
+    // C9: delete removes the message from history.
+    provider.delete_message(&chat_id, &sent.id).await.expect("C9: delete works");
+    let msgs = provider.list_messages(&chat_id).await.expect("C9: list works");
+    assert!(!msgs.iter().any(|m| m.id == sent.id), "C9: deleted gone");
 }
 
 #[tokio::test]
