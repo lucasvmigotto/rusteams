@@ -77,3 +77,87 @@ pub fn render_read_view(f: &mut Frame, view: &ReadView) {
 
     f.render_widget(Paragraph::new(view.status.clone()), chrome[2]);
 }
+
+use super::keys::KeyAction;
+use crate::app::{AppState, Command};
+
+/// Assemble a [`ReadView`] from app state: sidebar rows with unread flags,
+/// selected chat's messages with HH:MM stamps, connection label, key hints.
+pub fn build_read_view(state: &AppState) -> ReadView {
+    let chats = state
+        .chats
+        .iter()
+        .map(|c| (c.id.clone(), c.topic.clone().unwrap_or_else(|| "(untitled)".into()), c.unread))
+        .collect();
+    let messages = state
+        .selected_chat
+        .as_ref()
+        .map(|sel| {
+            state
+                .messages
+                .iter()
+                .filter(|m| &m.chat_id == sel)
+                .map(|m| MessageRow {
+                    sender: m.sender.clone(),
+                    time: m.created.format("%H:%M").to_string(),
+                    body: m.body.clone(),
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    ReadView {
+        title: "rusteams".into(),
+        connection: connection_label(state),
+        chats,
+        selected_chat: state.selected_chat.clone(),
+        messages,
+        status: "j/k move · Enter open · / palette · Ctrl+Q quit".into(),
+    }
+}
+
+fn connection_label(state: &AppState) -> String {
+    use crate::app::app_state::ConnectionState as S;
+    match state.connection {
+        S::Connected => "Connected",
+        S::Degraded => "Degraded",
+        S::Disconnected => "Disconnected",
+        S::Reconnecting => "Reconnecting",
+        S::Syncing => "Syncing",
+    }
+    .into()
+}
+
+/// Fold a key action into app state. Returns true when the UI must quit.
+pub fn apply_action(state: &mut AppState, action: KeyAction) -> bool {
+    match action {
+        KeyAction::Quit => true,
+        KeyAction::NextChat => {
+            step_selection(state, 1);
+            false
+        }
+        KeyAction::PrevChat => {
+            step_selection(state, -1);
+            false
+        }
+        KeyAction::Open => false,
+        KeyAction::Palette => false,
+    }
+}
+
+fn step_selection(state: &mut AppState, dir: i32) {
+    if state.chats.is_empty() {
+        return;
+    }
+    let len = state.chats.len();
+    let next = match state
+        .selected_chat
+        .as_ref()
+        .and_then(|s| state.chats.iter().position(|c| &c.id == s))
+    {
+        Some(i) => ((i as i32 + dir).rem_euclid(len as i32)) as usize,
+        None if dir > 0 => 0,
+        None => len - 1,
+    };
+    let id = state.chats[next].id.clone();
+    state.apply(Command::SelectChat { chat_id: id });
+}
