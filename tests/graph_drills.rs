@@ -278,7 +278,6 @@ async fn drill_lists_hosted_contents() {
         .await;
 
     let client = GraphClient::new(&server.uri(), "test-token");
-    let list =
-        client.list_hosted_contents("chat-1", "m1").await.expect("drill: hosted list works");
+    let list = client.list_hosted_contents("chat-1", "m1").await.expect("drill: hosted list works");
     assert_eq!(list, vec![("h1".to_string(), "image/png".to_string())]);
 }
