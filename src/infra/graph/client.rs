@@ -44,10 +44,33 @@ impl GraphClient {
     }
 
     async fn get(&self, url: &str) -> Result<reqwest::Response, AppError> {
-        self.auth(self.http.get(url))
-            .send()
-            .await
-            .map_err(|e| AppError::Network(safe_network_message(&e)))
+        // Bounded retries; 429/5xx honor Retry-After (capped), 401 fails fast.
+        let mut attempts = 0;
+        loop {
+            let resp = self
+                .auth(self.http.get(url))
+                .send()
+                .await
+                .map_err(|e| AppError::Network(safe_network_message(&e)))?;
+            let status = resp.status().as_u16();
+            let retry_after = resp
+                .headers()
+                .get(reqwest::header::RETRY_AFTER)
+                .and_then(|v| v.to_str().ok())
+                .and_then(|v| v.parse::<u64>().ok());
+            match classify_status(status, retry_after) {
+                RetryHint::RetryAfter(secs) if attempts < 3 => {
+                    attempts += 1;
+                    tokio::time::sleep(std::time::Duration::from_secs(secs.min(5))).await;
+                }
+                RetryHint::RetryAfter(_) => {
+                    return Err(AppError::Network(format!(
+                        "graph HTTP {status} (retries exhausted)"
+                    )));
+                }
+                RetryHint::NoRetry => return Ok(resp),
+            }
+        }
     }
 
     /// List the signed-in user's chats (`GET /me/chats`).
