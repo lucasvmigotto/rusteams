@@ -15,6 +15,9 @@ pub enum Command {
     SelectChat {
         chat_id: String,
     },
+    ChatsLoaded {
+        chats: Vec<Chat>,
+    },
     MessagesLoaded {
         chat_id: String,
         messages: Vec<ChatMessage>,
@@ -43,6 +46,7 @@ pub enum Command {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
     ChatSelected { chat_id: String },
+    ChatsReplaced { count: usize },
     MessagesReplaced { chat_id: String, count: usize },
     MessageAppended { id: String },
     MessageUpserted { id: String },
@@ -67,6 +71,11 @@ impl AppState {
             Command::SelectChat { chat_id } => {
                 self.selected_chat = Some(chat_id.clone());
                 vec![Event::ChatSelected { chat_id }]
+            }
+            Command::ChatsLoaded { chats } => {
+                let count = chats.len();
+                self.chats = chats;
+                vec![Event::ChatsReplaced { count }]
             }
             Command::MessagesLoaded { chat_id, messages } => {
                 let count = messages.len();
