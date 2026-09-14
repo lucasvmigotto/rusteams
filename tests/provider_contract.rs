@@ -61,17 +61,11 @@ where
     assert_eq!(edited.body, "contract v2", "C7: body updated");
 
     // C8: reactions attach and detach.
-    provider
-        .set_reaction(&chat_id, &sent.id, "like")
-        .await
-        .expect("C8: set_reaction works");
+    provider.set_reaction(&chat_id, &sent.id, "like").await.expect("C8: set_reaction works");
     let msgs = provider.list_messages(&chat_id).await.expect("C8: list works");
     let reacted = msgs.iter().find(|m| m.id == sent.id).expect("C8: reacted visible");
     assert!(reacted.reactions.iter().any(|r| r.kind == "like"), "C8: reaction stored");
-    provider
-        .unset_reaction(&chat_id, &sent.id, "like")
-        .await
-        .expect("C8: unset_reaction works");
+    provider.unset_reaction(&chat_id, &sent.id, "like").await.expect("C8: unset_reaction works");
 
     // C9: delete removes the message from history.
     provider.delete_message(&chat_id, &sent.id).await.expect("C9: delete works");
