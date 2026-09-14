@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use rusteams::tui::{KeyAction, map_key, run_scripted};
+use rusteams::tui::{KeyAction, fold_actions, map_key, run_scripted};
 
 fn key(code: KeyCode) -> KeyEvent {
     KeyEvent::new(code, KeyModifiers::NONE)
@@ -51,4 +51,44 @@ fn scripted_stream_drives_commands_until_quit() {
         cmds,
         vec![KeyAction::NextChat, KeyAction::NextChat, KeyAction::Open, KeyAction::Quit,]
     );
+}
+
+#[test]
+fn fold_applies_actions_to_state_until_quit() {
+    use rusteams::app::AppState;
+    use rusteams::domain::Chat;
+
+    let mut state = AppState {
+        chats: vec![
+            Chat {
+                id: "c1".into(),
+                topic: Some("A".into()),
+                last_message_preview: None,
+                last_message_at: None,
+                unread: false,
+            },
+            Chat {
+                id: "c2".into(),
+                topic: Some("B".into()),
+                last_message_preview: None,
+                last_message_at: None,
+                unread: false,
+            },
+        ],
+        ..Default::default()
+    };
+    let quit = fold_actions(
+        &mut state,
+        &[KeyAction::NextChat, KeyAction::Open, KeyAction::Palette, KeyAction::Quit],
+    );
+    assert!(quit, "quit terminates the fold");
+    assert_eq!(state.selected_chat.as_deref(), Some("c1"));
+}
+
+#[test]
+fn fold_without_quit_returns_false() {
+    use rusteams::app::AppState;
+
+    let mut state = AppState::default();
+    assert!(!fold_actions(&mut state, &[KeyAction::NextChat, KeyAction::Open]));
 }
