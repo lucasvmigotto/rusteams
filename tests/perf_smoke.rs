@@ -25,6 +25,7 @@ fn big_view(n: usize) -> ReadView {
             })
             .collect(),
         status: "ok".into(),
+        notice: None,
     }
 }
 

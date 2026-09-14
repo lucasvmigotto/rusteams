@@ -32,6 +32,9 @@ pub struct ReadView {
     pub selected_chat: Option<String>,
     pub messages: Vec<MessageRow>,
     pub status: String,
+    /// Optional transient notice (e.g. last send error). Rendered in the
+    /// status line when present; hints + version always remain.
+    pub notice: Option<String>,
 }
 
 /// Render header (title + connection), sidebar, conversation, and status bar.
@@ -117,7 +120,9 @@ pub fn message_lines(msg: &crate::domain::ChatMessage) -> Vec<ratatui::text::Lin
 
 /// Assemble a [`ReadView`] from app state: sidebar rows with unread flags,
 /// selected chat's messages with HH:MM stamps, connection label, key hints.
-pub fn build_read_view(state: &AppState) -> ReadView {
+/// An optional notice (e.g. last send error) appends to the status line;
+/// hints and version are always present for screen-reader stability.
+pub fn build_read_view(state: &AppState, notice: Option<&str>) -> ReadView {
     let chats = state
         .chats
         .iter()
@@ -139,16 +144,22 @@ pub fn build_read_view(state: &AppState) -> ReadView {
                 .collect()
         })
         .unwrap_or_default();
+    let mut status = format!(
+        "j/k move · Enter open · / palette · Ctrl+Q quit · rusteams {}",
+        env!("CARGO_PKG_VERSION")
+    );
+    if let Some(note) = notice {
+        status.push_str(" · ");
+        status.push_str(note);
+    }
     ReadView {
         title: "rusteams".into(),
         connection: connection_label(state),
         chats,
         selected_chat: state.selected_chat.clone(),
         messages,
-        status: format!(
-            "j/k move · Enter open · / palette · Ctrl+Q quit · rusteams {}",
-            env!("CARGO_PKG_VERSION")
-        ),
+        status,
+        notice: notice.map(str::to_string),
     }
 }
 

@@ -1,5 +1,6 @@
 pub mod app;
 pub mod compose;
+pub mod confirm;
 pub mod events;
 pub mod keys;
 pub mod loop_;
@@ -9,6 +10,7 @@ pub use app::{
     ChatRow, MessageRow, ReadView, apply_action, build_read_view, message_lines, render_read_view,
 };
 pub use compose::{Composer, Palette, handle_submit};
+pub use confirm::Confirm;
 pub use keys::{KeyAction, map_key};
 pub use loop_::{LiveServices, fold_actions, run_live, run_scripted};
 pub use notify::{NoticeQueue, notify_for_message};
