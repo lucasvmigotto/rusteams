@@ -4,7 +4,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use async_trait::async_trait;
-use rusteams::app::{AppState, Command, Poller, Shutdown, Watermarks, poll_due_chats, refresh_chats};
+use rusteams::app::{
+    AppState, Command, Poller, Shutdown, Watermarks, note_connection, poll_due_chats,
+    refresh_chats,
+};
+use rusteams::app::{app_state::ConnectionState, connection::ConnectionEvent};
 use rusteams::domain::{Chat, ChatMessage};
 use rusteams::error::AppError;
 use rusteams::provider::{ChatProvider, MockTeamsProvider};
@@ -168,4 +172,20 @@ async fn drill_reconnect_resets_watermarks() {
     assert!(!marks.is_due("chat-1", Duration::from_secs(3600)));
     marks.reset();
     assert!(marks.is_due("chat-1", Duration::from_secs(3600)), "reconnect re-baselines");
+}
+
+#[tokio::test]
+async fn drill_reconnect_event_rebaselines_watermarks() {
+    let mut state = AppState::default();
+    let mut marks = Watermarks::default();
+    marks.mark_synced("chat-1");
+    // Connected -> hard failure -> reconnect attempt lands Reconnecting.
+    state.apply(Command::ConnectionEvent(ConnectionEvent::HardFailure));
+    assert_eq!(state.connection, ConnectionState::Disconnected);
+    note_connection(&mut state, &mut marks, ConnectionEvent::ReconnectAttempt);
+    assert_eq!(state.connection, ConnectionState::Reconnecting);
+    assert!(
+        marks.is_due("chat-1", Duration::from_secs(3600)),
+        "reconnect clears watermarks for re-baseline"
+    );
 }
