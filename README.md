@@ -17,6 +17,8 @@
 - `GraphClient` drills (chat/message listing + send, 429 retry, paging, failure
   modes) against mock servers, bound to the provider traits — no live data yet
 - Offline suites: unit + contract + property tests, `MockTeamsProvider`
+- Read-only TUI panes (sidebar, conversation, status bar) with TestBackend
+  snapshot tests — not yet wired to live state
 
 ## What does NOT work yet
 
