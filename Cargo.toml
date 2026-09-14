@@ -1,6 +1,6 @@
 [package]
 name = "rusteams"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "Terminal user interface (TUI) client for Microsoft Teams via Microsoft Graph (MVP: real-time chat)"
 license = "GPL-3.0-or-later"

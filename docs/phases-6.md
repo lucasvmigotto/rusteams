@@ -29,12 +29,18 @@ Full TUI: sidebar, conversation, composer, status bar, command palette, keyboard
 
 Remaining: live crossterm event feed into the same fold (runtime loop).
 
-## Accessibility notes (tracked, verified where testable)
+## Accessibility sign-off (MVP gate, re-verified)
 
-- Meaning never conveyed by color alone (selection uses `●` marker + text).
-- Empty/degraded states always expose text hints (snapshot-tested).
-- Narrow-terminal (20×8) smoke test guards resize crashes.
-- Screen-reader and full keyboard-only operation pending event-loop wiring.
+- [x] Meaning never conveyed by color alone (selection `●` + text, snapshot-tested)
+- [x] Empty/degraded states expose text hints (snapshot-tested)
+- [x] Narrow-terminal (20×8) smoke test guards resize crashes
+- [x] Keyboard map covers navigation/open/palette/quit (scripted-loop tested)
+- [ ] Screen-reader pass — pending live terminal verification (not claimed)
+- [ ] Full keyboard-only operation end-to-end — pending runtime loop
+
+## Remaining (post-MVP)
+
+- Live crossterm event feed, composer send wiring, notifications, benchmarks.
 
 ## Scope
 
