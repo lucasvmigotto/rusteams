@@ -230,3 +230,54 @@ async fn drill_hosted_content_returns_typed_bytes() {
     assert_eq!(content.content_type, "image/png");
     assert_eq!(content.bytes, b"\x89PNG\r\n\x1a\n");
 }
+
+#[tokio::test]
+async fn drill_send_mention_posts_html_with_at_tag() {
+    use wiremock::matchers::{body_json, method, path_regex};
+
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path_regex(r"/me/chats/.*/messages$"))
+        .and(body_json(serde_json::json!({
+            "body": {
+                "contentType": "html",
+                "content": "hi <at id=\"0\">Alice</at>"
+            },
+            "mentions": [{
+                "id": 0,
+                "mentionText": "Alice",
+                "mentioned": {
+                    "user": {
+                        "id": "user-1",
+                        "displayName": "Alice",
+                        "userIdentityType": "aadUser"
+                    }
+                }
+            }]
+        })))
+        .respond_with(ResponseTemplate::new(201).set_body_json(graph_message("m8", "hi Alice")))
+        .mount(&server)
+        .await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    let msg = client
+        .send_mention("chat-1", "hi ", "user-1", "Alice")
+        .await
+        .expect("drill: mention works");
+    assert_eq!(msg.id, "m8");
+}
+
+#[tokio::test]
+async fn drill_lists_hosted_contents() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "value": [{ "id": "h1", "contentType": "image/png" }]
+        })))
+        .mount(&server)
+        .await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    let list = client.list_hosted_contents("chat-1", "m1").await.expect("drill: hosted list works");
+    assert_eq!(list, vec![("h1".to_string(), "image/png".to_string())]);
+}
