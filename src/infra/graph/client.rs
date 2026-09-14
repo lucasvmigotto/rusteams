@@ -323,6 +323,70 @@ impl GraphClient {
         Self::check_mutation(resp).await
     }
 
+    /// Reply with quote (`POST …/messages/replyWithQuote`, schema per
+    /// Microsoft Learn `chatmessage-replywithquote`). Returns the created message.
+    pub async fn reply_with_quote(
+        &self,
+        chat_id: &str,
+        message_ids: &[String],
+        body: &str,
+    ) -> Result<ChatMessage, AppError> {
+        let url = format!("{}/messages/replyWithQuote", messages_url(&self.base, chat_id));
+        let resp = self
+            .auth(self.http.post(&url))
+            .json(&serde_json::json!({
+                "messageIds": message_ids,
+                "replyMessage": { "body": { "contentType": "text", "content": body } }
+            }))
+            .send()
+            .await
+            .map_err(|e| AppError::Network(safe_network_message(&e)))?;
+        let status = resp.status().as_u16();
+        if status == 401 {
+            return Err(AppError::Auth("graph rejected credentials".into()));
+        }
+        if !(200..300).contains(&status) {
+            return Err(AppError::Network(format!("graph HTTP {status}")));
+        }
+        let dto: MessageDto =
+            resp.json().await.map_err(|_| AppError::Provider("malformed graph response".into()))?;
+        map_message(chat_id, dto)
+    }
+
+    /// Fetch hosted message content bytes (images, code snippets).
+    /// Capped at 5 MiB against hostile payloads; content type is informational.
+    pub async fn get_hosted_content(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        content_id: &str,
+    ) -> Result<HostedContent, AppError> {
+        let url =
+            format!("{}/hostedContents/{content_id}/$value", self.message_url(chat_id, message_id));
+        let resp = self.get(&url).await?;
+        let status = resp.status().as_u16();
+        if status == 401 {
+            return Err(AppError::Auth("graph rejected credentials".into()));
+        }
+        if !(200..300).contains(&status) {
+            return Err(AppError::Network(format!("graph HTTP {status}")));
+        }
+        let content_type = resp
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream")
+            .to_string();
+        let bytes = resp
+            .bytes()
+            .await
+            .map_err(|_| AppError::Provider("malformed graph response".into()))?;
+        if bytes.len() > 5 * 1024 * 1024 {
+            return Err(AppError::Security("hosted content exceeds size cap".into()));
+        }
+        Ok(HostedContent { content_type, bytes: bytes.to_vec() })
+    }
+
     /// Search the signed-in user's messages (`POST /search/query`,
     /// `entityTypes: ["chatMessage"]`). Returns ranked hits; use
     /// `list_messages`/`chatmessage-get` to hydrate full bodies.
@@ -366,6 +430,13 @@ impl GraphClient {
             })
             .collect())
     }
+}
+
+/// Fetched hosted content: raw bytes plus the server-declared type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HostedContent {
+    pub content_type: String,
+    pub bytes: Vec<u8>,
 }
 
 #[derive(Debug, Deserialize)]
