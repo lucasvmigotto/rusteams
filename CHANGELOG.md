@@ -43,6 +43,7 @@ is SemVer with `MVP ≠ 1.0.0`.
 - Message ops: provider-trait edit/delete/reactions (+ contract C7–C9) with
   mock and adapter implementations, all drilled.
 - Quote-reply per documented schema; hosted-content fetch with size cap.
+- Mention send with escaped `<at>` payload; hosted-content listing refs.
 - Read-only TUI panes with snapshot tests; keyboard map stubbed for composer phase.
 - Polling sync: per-chat `Poller` with watermark scheduling, chaos drills for
   duplicate/reordered pages, shutdown fail-fast.
