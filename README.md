@@ -18,7 +18,7 @@
 - `GraphClient` drills (chat/message listing + send + search + edit/delete/
   reactions + quote-reply + mentions + hosted fetch/list, 429 retry, paging,
   failure modes) against mock servers, bound to the provider traits — no live
-  data yet
+  data yet; mention reads render `@Name`
 - Offline suites: unit + contract + property tests, `MockTeamsProvider`
 - Read-only TUI panes (sidebar, conversation, status bar) with TestBackend
   snapshot tests — not yet wired to live state
