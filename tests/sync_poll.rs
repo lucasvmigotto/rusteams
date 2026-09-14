@@ -4,10 +4,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use async_trait::async_trait;
-use rusteams::app::{AppState, Command, Poller, Shutdown};
+use rusteams::app::{AppState, Command, Poller, Shutdown, Watermarks, poll_due_chats, refresh_chats};
 use rusteams::domain::{Chat, ChatMessage};
 use rusteams::error::AppError;
 use rusteams::provider::{ChatProvider, MockTeamsProvider};
+use std::time::Duration;
 
 fn shutdown_pair() -> (rusteams::app::ShutdownTrigger, Shutdown) {
     Shutdown::new()
@@ -87,4 +88,84 @@ async fn drill_new_message_arrives_on_next_poll() {
     poller.poll_once(&mut state, "chat-1").await.unwrap();
     state.apply(Command::SelectChat { chat_id: "chat-1".into() });
     assert!(state.messages.is_empty());
+}
+
+/// Drop decorator: hides the first message once, then behaves (loss + heal).
+struct Flaky<P> {
+    inner: P,
+    drop_armed: std::sync::atomic::AtomicBool,
+}
+
+#[async_trait]
+impl<P: ChatProvider + Sync> ChatProvider for Flaky<P> {
+    async fn list_chats(&self) -> Result<Vec<Chat>, AppError> {
+        self.inner.list_chats().await
+    }
+
+    async fn list_messages(&self, chat_id: &str) -> Result<Vec<ChatMessage>, AppError> {
+        let mut msgs = self.inner.list_messages(chat_id).await?;
+        if self.drop_armed.swap(false, std::sync::atomic::Ordering::SeqCst) {
+            msgs.remove(0);
+        }
+        Ok(msgs)
+    }
+
+    async fn send_message(&self, chat_id: &str, body: &str) -> Result<ChatMessage, AppError> {
+        self.inner.send_message(chat_id, body).await
+    }
+}
+
+#[tokio::test]
+async fn drill_sweeper_refreshes_chat_list() {
+    let provider = MockTeamsProvider::new();
+    let mut state = AppState::default();
+    let events = refresh_chats(&mut state, &provider).await.expect("drill: sweep works");
+    assert_eq!(events.len(), 1);
+    assert_eq!(state.chats.len(), 1);
+    assert_eq!(state.chats[0].id, "chat-1");
+}
+
+#[tokio::test]
+async fn drill_due_polling_skips_fresh_watermarks() {
+    let provider = MockTeamsProvider::new();
+    provider.send_message("chat-1", "hi").await.unwrap();
+    let (_trigger, shutdown) = shutdown_pair();
+    let poller = Poller::new(provider, shutdown);
+    let mut state = AppState::default();
+    state.apply(Command::SelectChat { chat_id: "chat-1".into() });
+    let mut marks = Watermarks::default();
+    let first = poll_due_chats(&mut state, &poller, &mut marks, Duration::from_secs(60))
+        .await
+        .expect("drill: first tick polls");
+    assert!(!first.is_empty(), "stale chat is polled");
+    let second = poll_due_chats(&mut state, &poller, &mut marks, Duration::from_secs(60))
+        .await
+        .expect("drill: second tick runs");
+    assert!(second.is_empty(), "fresh watermark skips the poll");
+}
+
+#[tokio::test]
+async fn drill_dropped_message_heals_on_next_poll() {
+    let inner = MockTeamsProvider::new();
+    inner.send_message("chat-1", "one").await.unwrap();
+    inner.send_message("chat-1", "two").await.unwrap();
+    let (_trigger, shutdown) = shutdown_pair();
+    let poller = Poller::new(
+        Flaky { inner, drop_armed: std::sync::atomic::AtomicBool::new(true) },
+        shutdown,
+    );
+    let mut state = AppState::default();
+    poller.poll_once(&mut state, "chat-1").await.expect("drill: lossy poll works");
+    assert_eq!(state.messages.len(), 1, "one message lost in transit");
+    poller.poll_once(&mut state, "chat-1").await.expect("drill: heal poll works");
+    assert_eq!(state.messages.len(), 2, "next complete fetch heals the gap");
+}
+
+#[tokio::test]
+async fn drill_reconnect_resets_watermarks() {
+    let mut marks = Watermarks::default();
+    marks.mark_synced("chat-1");
+    assert!(!marks.is_due("chat-1", Duration::from_secs(3600)));
+    marks.reset();
+    assert!(marks.is_due("chat-1", Duration::from_secs(3600)), "reconnect re-baselines");
 }
