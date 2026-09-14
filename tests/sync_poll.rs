@@ -39,6 +39,37 @@ impl<P: ChatProvider + Sync> ChatProvider for Chaotic<P> {
     async fn send_message(&self, chat_id: &str, body: &str) -> Result<ChatMessage, AppError> {
         self.inner.send_message(chat_id, body).await
     }
+
+    async fn update_message(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        body: &str,
+    ) -> Result<ChatMessage, AppError> {
+        self.inner.update_message(chat_id, message_id, body).await
+    }
+
+    async fn delete_message(&self, chat_id: &str, message_id: &str) -> Result<(), AppError> {
+        self.inner.delete_message(chat_id, message_id).await
+    }
+
+    async fn set_reaction(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        kind: &str,
+    ) -> Result<(), AppError> {
+        self.inner.set_reaction(chat_id, message_id, kind).await
+    }
+
+    async fn unset_reaction(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        kind: &str,
+    ) -> Result<(), AppError> {
+        self.inner.unset_reaction(chat_id, message_id, kind).await
+    }
 }
 
 #[tokio::test]
@@ -115,6 +146,37 @@ impl<P: ChatProvider + Sync> ChatProvider for Flaky<P> {
 
     async fn send_message(&self, chat_id: &str, body: &str) -> Result<ChatMessage, AppError> {
         self.inner.send_message(chat_id, body).await
+    }
+
+    async fn update_message(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        body: &str,
+    ) -> Result<ChatMessage, AppError> {
+        self.inner.update_message(chat_id, message_id, body).await
+    }
+
+    async fn delete_message(&self, chat_id: &str, message_id: &str) -> Result<(), AppError> {
+        self.inner.delete_message(chat_id, message_id).await
+    }
+
+    async fn set_reaction(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        kind: &str,
+    ) -> Result<(), AppError> {
+        self.inner.set_reaction(chat_id, message_id, kind).await
+    }
+
+    async fn unset_reaction(
+        &self,
+        chat_id: &str,
+        message_id: &str,
+        kind: &str,
+    ) -> Result<(), AppError> {
+        self.inner.unset_reaction(chat_id, message_id, kind).await
     }
 }
 
