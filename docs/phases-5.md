@@ -1,22 +1,27 @@
-# Phase 5 — Real-Time Event Architecture (Polling-First, in progress)
+# Phase 5 — Real-Time Event Architecture (Polling-First, core done)
 
 ## Objective
 
 Near-real-time sync without webhooks: poll + diff + reconnect state machine.
 
-## Delivered so far (`feat/realtime-poll`)
+## Delivered (`feat/realtime-poll`, `feat/sync-loop`)
 
 - `Poller`: per-chat full-fetch, `diff_sync` delta, reducer application, quiet
   steady state, `Shutdown` fail-fast. Chaos drills (duplicate + reversed pages)
   converge to ordered truth.
-- `Watermarks`: last-success scheduling (`is_due`), i.e. re-baselining primitive.
+- `refresh_chats` sweeper (`ChatsLoaded` → `ChatsReplaced`).
+- `poll_due_chats` tick: selected chat polls when watermark due; failures stay
+  due (throttle-safe: no hammering, `Retry-After` honored in the adapter).
+- `Watermarks::reset` + `note_connection`: entering `Reconnecting` re-baselines
+  every chat; next complete-fetch diffs heal gaps.
+- Drop-injection drill: lost message reported, then healed on next poll —
+  missed-event recovery demonstrated in tests.
 - Latency honesty: no push claims anywhere; see README.
 
-## Remaining scope
+## Remaining (live-loop integration, with the runtime)
 
-- List sweeper honoring `Retry-After` + backoff/jitter caps in the poll loop
-- Reconnect-loop binding (`transition()` + poller + `Watermarks` reset)
-- Drop-injection chaos (message loss mid-page) and missed-event recovery demo
+- Running the tick on a timer inside the supervised task tree; backoff/jitter
+  caps on the schedule (primitives exist: `backoff_delay`, `is_due`).
 
 ## Non-Goals
 
@@ -24,4 +29,6 @@ Public webhook endpoint; background push.
 
 ## Definition of Done
 
-Reconnect storms bounded; missed-event recovery demonstrated in tests.
+- [x] Missed-event recovery demonstrated in tests
+- [x] Reconnect re-baselines watermarks (storm-bounding via due-gating)
+- [ ] Live-loop timer integration (runtime stage)
