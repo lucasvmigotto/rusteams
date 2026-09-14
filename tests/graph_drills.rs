@@ -106,6 +106,30 @@ fn graph_message(id: &str, body: &str) -> serde_json::Value {
     })
 }
 
+fn graph_message_with_mention(id: &str) -> serde_json::Value {
+    serde_json::json!({
+        "id": id,
+        "createdDateTime": "2026-09-14T10:00:00Z",
+        "lastModifiedDateTime": "2026-09-14T10:00:00Z",
+        "body": {
+            "contentType": "html",
+            "content": "hi <at id=\"0\">Alice</at>, review this"
+        },
+        "from": { "user": { "displayName": "Bob" } },
+        "mentions": [{
+            "id": 0,
+            "mentionText": "Alice",
+            "mentioned": {
+                "user": {
+                    "id": "user-1",
+                    "displayName": "Alice",
+                    "userIdentityType": "aadUser"
+                }
+            }
+        }]
+    })
+}
+
 #[tokio::test]
 async fn drill_lists_messages_with_sanitized_bodies() {
     let server = MockServer::start().await;
@@ -280,4 +304,23 @@ async fn drill_lists_hosted_contents() {
     let client = GraphClient::new(&server.uri(), "test-token");
     let list = client.list_hosted_contents("chat-1", "m1").await.expect("drill: hosted list works");
     assert_eq!(list, vec![("h1".to_string(), "image/png".to_string())]);
+}
+
+#[tokio::test]
+async fn drill_mention_maps_to_at_name_and_mention() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "value": [graph_message_with_mention("m3")]
+        })))
+        .mount(&server)
+        .await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    let msgs = client.list_messages("chat-1").await.expect("drill: mention list works");
+    assert_eq!(msgs.len(), 1);
+    assert_eq!(msgs[0].body, "hi @Alice, review this");
+    assert_eq!(msgs[0].mentions.len(), 1);
+    assert_eq!(msgs[0].mentions[0].display_name, "Alice");
+    assert_eq!(msgs[0].mentions[0].user_id.as_deref(), Some("user-1"));
 }
