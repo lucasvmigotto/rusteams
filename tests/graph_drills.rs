@@ -164,3 +164,33 @@ async fn drill_adapter_serves_provider_traits() {
     let presence: &dyn PresenceProvider = &client;
     assert_eq!(presence.my_presence().await.expect("drill: trait presence"), "Available");
 }
+
+#[tokio::test]
+async fn drill_update_returns_confirmed_message() {
+    let server = MockServer::start().await;
+    Mock::given(method("PATCH"))
+        .respond_with(ResponseTemplate::new(204))
+        .up_to_n_times(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(graph_message("m1", "edited")))
+        .mount(&server)
+        .await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    let msg = client.update_message("chat-1", "m1", "edited").await.expect("drill: update works");
+    assert_eq!(msg.id, "m1");
+    assert_eq!(msg.body, "edited");
+}
+
+#[tokio::test]
+async fn drill_delete_and_reactions_succeed() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST")).respond_with(ResponseTemplate::new(204)).mount(&server).await;
+
+    let client = GraphClient::new(&server.uri(), "test-token");
+    client.delete_message("chat-1", "m1").await.expect("drill: delete works");
+    client.set_reaction("chat-1", "m1", "like").await.expect("drill: react works");
+    client.unset_reaction("chat-1", "m1", "like").await.expect("drill: unreact works");
+}
