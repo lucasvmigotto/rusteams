@@ -73,6 +73,32 @@ struct MessageDto {
     body: Option<ItemBodyDto>,
     #[serde(default)]
     from: Option<FromDto>,
+    #[serde(default)]
+    mentions: Vec<MentionDto>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MentionDto {
+    #[serde(default)]
+    #[serde(rename = "mentionText")]
+    mention_text: Option<String>,
+    #[serde(default)]
+    mentioned: Option<MentionedDto>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MentionedDto {
+    #[serde(default)]
+    user: Option<MentionedUserDto>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MentionedUserDto {
+    #[serde(default)]
+    id: Option<String>,
+    #[serde(default)]
+    #[serde(rename = "displayName")]
+    display_name: Option<String>,
 }
 
 fn parse_time(s: &str) -> Result<DateTime<Utc>, AppError> {
@@ -87,12 +113,30 @@ fn map_message(chat_id: &str, dto: MessageDto) -> Result<ChatMessage, AppError> 
         Some(s) => parse_time(&s)?,
         None => created,
     };
-    let body = dto.body.map(|b| crate::sanitize::sanitize(&b.content)).unwrap_or_default();
+    let raw = dto.body.map(|b| b.content).unwrap_or_default();
+    let with_ats = render_at_tags(&raw);
+    let body = crate::sanitize::sanitize(&with_ats);
     let sender = dto
         .from
         .and_then(|f| f.user)
         .and_then(|u| u.display_name)
         .unwrap_or_else(|| "unknown".into());
+    let mentions = dto
+        .mentions
+        .into_iter()
+        .map(|m| {
+            let display_name = m.mention_text.clone().unwrap_or_default();
+            // Best-effort offset: first occurrence of the display name in the
+            // rendered body. Graph exposes no offsets; 0 when absent.
+            let offset = body.find(&display_name).unwrap_or(0);
+            crate::domain::Mention {
+                user_id: m.mentioned.and_then(|d| d.user).and_then(|u| u.id),
+                length: display_name.len(),
+                display_name,
+                offset,
+            }
+        })
+        .collect();
     Ok(ChatMessage {
         id: dto.id,
         chat_id: chat_id.into(),
@@ -102,9 +146,34 @@ fn map_message(chat_id: &str, dto: MessageDto) -> Result<ChatMessage, AppError> 
         body,
         reply_to_id: None,
         reactions: vec![],
-        mentions: vec![],
+        mentions,
         is_read: false,
     })
+}
+
+/// Convert `<at id="N">Name</at>` segments to `@Name`. Other markup passes
+/// through untouched (full HTML→text remains deferred Phase 3 work).
+fn render_at_tags(html: &str) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+    while let Some(start) = rest.find("<at ") {
+        out.push_str(&rest[..start]);
+        let after_open = &rest[start..];
+        match after_open.find('>').map(|i| (i, after_open.find("</at>"))) {
+            Some((tag_end, Some(close))) if close > tag_end => {
+                let name = &after_open[tag_end + 1..close];
+                out.push('@');
+                out.push_str(name);
+                rest = &after_open[close + "</at>".len()..];
+            }
+            _ => {
+                out.push_str(after_open);
+                break;
+            }
+        }
+    }
+    out.push_str(rest);
+    out
 }
 
 impl GraphClient {
