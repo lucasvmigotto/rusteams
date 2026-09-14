@@ -63,10 +63,10 @@ pub async fn run_live(
         {
             match event::read().map_err(|e| AppError::Terminal(format!("event read: {e}")))? {
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
-                    if let Some(action) = map_key(key) {
-                        if fold_actions(state, &[action]) {
-                            break;
-                        }
+                    if let Some(action) = map_key(key)
+                        && fold_actions(state, &[action])
+                    {
+                        break;
                     }
                 }
                 _ => {}
