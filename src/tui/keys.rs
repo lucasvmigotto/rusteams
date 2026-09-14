@@ -14,6 +14,7 @@ pub enum KeyAction {
     PrevChat,
     Open,
     Palette,
+    Compose,
     Quit,
 }
 
@@ -26,6 +27,7 @@ pub fn map_key(key: KeyEvent) -> Option<KeyAction> {
         (KeyCode::Char('p'), m) if m.contains(KeyModifiers::CONTROL) => Some(KeyAction::PrevChat),
         (KeyCode::Char('j'), KeyModifiers::NONE) => Some(KeyAction::NextChat),
         (KeyCode::Char('k'), KeyModifiers::NONE) => Some(KeyAction::PrevChat),
+        (KeyCode::Char('i'), KeyModifiers::NONE) => Some(KeyAction::Compose),
         (KeyCode::Char('/'), _) => Some(KeyAction::Palette),
         (KeyCode::Enter, _) => Some(KeyAction::Open),
         _ => None,

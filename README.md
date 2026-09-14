@@ -24,6 +24,8 @@
   snapshot tests — not yet wired to live state
 - Composer buffer + palette filter models, optimistic-send reducer flow
   (`MessageSent` → `MessageConfirmed`) — event-loop keybindings pending
+- Compose mode wired (`i`, type, `Enter` submit with rollback, `Esc` abandon)
+  through `LiveServices::step`; live TTY feed verified manually
 - Bound keyboard map (`j/k`, Emacs aliases, palette, quit) with scripted-loop
   harness — live terminal feed lands with the runtime loop
 - Live event loop (`run_live`): crossterm feed, action fold, re-render, restore
