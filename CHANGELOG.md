@@ -44,6 +44,8 @@ is SemVer with `MVP ≠ 1.0.0`.
   mock and adapter implementations, all drilled.
 - Quote-reply per documented schema; hosted-content fetch with size cap.
 - Mention send with escaped `<at>` payload; hosted-content listing refs.
+- Mention reads: normalized `Mention`s with approximate offsets, `@Name` body
+  rendering.
 - Read-only TUI panes with snapshot tests; keyboard map stubbed for composer phase.
 - Polling sync: per-chat `Poller` with watermark scheduling, chaos drills for
   duplicate/reordered pages, shutdown fail-fast.

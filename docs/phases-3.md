@@ -4,12 +4,16 @@
 
 Conversation list, message history, presence, and search over live Graph.
 
-## Delivered so far (`feat/graph-messages`, `feat/graph-search`)
+## Delivered so far (`feat/graph-messages`, `feat/graph-search`, `feat/graph-mentions-read`)
 
 - `GraphClient::list_chats` (paged), `list_messages` (paged + ordered),
   `send_message`, `my_presence` — all DTO-mapped with sanitized bodies/topics.
 - `search_messages`: `POST /search/query` over `chatMessage`, ranked hits with
   sanitized summaries; absent fields stay absent.
+- Mention reads: `mentions` array parsed to normalized `Mention` (user id +
+  display name, best-effort first-occurrence offsets, documented approximate);
+  `<at>` tags render as `@Name`. Other HTML passes through — full HTML→text
+  remains deferred work, stated honestly here.
 - `ChatProvider` + `PresenceProvider` bound to the adapter; trait-object drills green.
 - Retry discipline shared by all endpoints (429/5xx, capped `Retry-After`, 401 fast-fail).
 
