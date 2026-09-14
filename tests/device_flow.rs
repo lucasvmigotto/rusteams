@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use rusteams::infra::auth::{DeviceCodeClient, default_scopes};
-use wiremock::{matchers::method, Mock, MockServer, ResponseTemplate};
+use wiremock::{Mock, MockServer, ResponseTemplate, matchers::method};
 
 fn device_code_body(server_uri: &str) -> serde_json::Value {
     serde_json::json!({
@@ -48,4 +48,57 @@ async fn drill_device_flow_polls_until_token() {
     assert_eq!(code.user_code, "ABCD-EFGH");
     let token = client.poll_for_token(&code, 5).await.expect("drill: token issued");
     assert_eq!(token.refresh_token.as_deref(), Some("rt-123"));
+}
+
+#[tokio::test]
+async fn drill_slow_down_extends_interval_and_still_succeeds() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(device_code_body(&server.uri())))
+        .up_to_n_times(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(400).set_body_json(serde_json::json!({
+            "error": "slow_down"
+        })))
+        .up_to_n_times(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "token_type": "Bearer",
+            "scope": default_scopes(),
+            "expires_in": 3600,
+            "access_token": "at-1",
+            "refresh_token": null
+        })))
+        .mount(&server)
+        .await;
+
+    let client = DeviceCodeClient::new(&server.uri(), "tenant", "client-id");
+    let code = client.request_code(&default_scopes()).await.expect("drill: code issued");
+    let token = client.poll_for_token(&code, 5).await.expect("drill: slow_down tolerated");
+    assert_eq!(token.access_token, "at-1");
+}
+
+#[tokio::test]
+async fn drill_expired_flow_is_an_auth_error() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(device_code_body(&server.uri())))
+        .up_to_n_times(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(400).set_body_json(serde_json::json!({
+            "error": "expired_token"
+        })))
+        .mount(&server)
+        .await;
+
+    let client = DeviceCodeClient::new(&server.uri(), "tenant", "client-id");
+    let code = client.request_code(&default_scopes()).await.expect("drill: code issued");
+    let err = client.poll_for_token(&code, 3).await.expect_err("drill: expiry fails");
+    assert_eq!(err.user_message(), "authentication failed");
 }
