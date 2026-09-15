@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0A0F1C" />
+  <rect x="120" y="170" width="360" height="240" rx="16" fill="none" stroke="#38BDF8" stroke-width="10" />
+  <path d="M200 410v70l70-70" fill="none" stroke="#38BDF8" stroke-width="10" stroke-linejoin="round" />
+  <text x="540" y="300" font-family="monospace" font-size="96" font-weight="bold" fill="#E2E8F0">rusteams</text>
+  <text x="542" y="360" font-family="monospace" font-size="36" fill="#64748B">Teams for the terminal</text>
+</svg>
