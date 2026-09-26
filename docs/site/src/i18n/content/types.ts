@@ -43,6 +43,9 @@ export interface UsageContent {
   intro: string;
   tuiBodyA: string;
   tuiBodyB: string;
+  tuiShotAlt: string;
+  tuiShotCaption: string;
+  tuiShotTranscript: string;
   shortcutsTitle: string;
   boundNote: CalloutText;
   notificationsBody: string;

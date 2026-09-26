@@ -5,6 +5,7 @@ import { Accordion, Callout, Card, CodeBlock, Section, StatusBadge, Table } from
 import { LocaleProvider } from "@/i18n/useLocale";
 import { Overview } from "@/pages/Overview";
 import { Faq } from "@/pages/project/Faq";
+import { Usage } from "@/pages/Usage";
 
 expect.extend(toHaveNoViolations);
 
@@ -41,6 +42,11 @@ describe("accessibility (automated axe)", () => {
 
   it("Overview page has no violations", async () => {
     const { container } = renderWithLocale(<Overview />);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("Usage page with terminal print has no violations", async () => {
+    const { container } = renderWithLocale(<Usage />);
     expect(await axe(container)).toHaveNoViolations();
   });
 
