@@ -20,15 +20,14 @@ pub struct DeviceCodeClient {
 }
 
 impl DeviceCodeClient {
-    /// `authority_base` is e.g. `https://login.microsoftonline.com/{tenant}`.
-    /// In tests it points at a wiremock server serving the same paths.
-    pub fn new(authority_base: &str, tenant: &str, client_id: &str) -> Self {
-        let authority = if authority_base.contains("login.microsoftonline.com") {
-            format!("{}/{}", authority_base.trim_end_matches('/'), tenant)
-        } else {
-            authority_base.trim_end_matches('/').to_string()
-        };
-        Self { http: reqwest::Client::new(), authority, client_id: client_id.to_string() }
+    /// `authority_base` is e.g. `https://login.microsoftonline.com` (tenant
+    /// appended) or a full-path test URL (used as-is). See `join_authority`.
+    pub fn new(authority_base: &str, tenant: &str, client_id: &str) -> Result<Self, AppError> {
+        Ok(Self {
+            http: crate::infra::http::build_client()?,
+            authority: super::device_code::join_authority(authority_base, tenant),
+            client_id: client_id.to_string(),
+        })
     }
 
     /// Scopes this client requests. Public so CLI/docs share one definition.

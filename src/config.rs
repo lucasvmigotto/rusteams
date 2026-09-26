@@ -8,6 +8,9 @@
 use crate::error::AppError;
 use serde::{Deserialize, Serialize};
 
+/// Microsoft Entra authority for production sign-in.
+pub const ENTRA_AUTHORITY: &str = "https://login.microsoftonline.com";
+
 /// Non-secret application configuration.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -15,6 +18,8 @@ pub struct AppConfig {
     pub client_id: Option<String>,
     /// Tenant ID or `organizations` for multi-tenant work/school sign-in.
     pub tenant_id: String,
+    /// Entra authority base URL (override for national clouds / tests).
+    pub entra_authority: String,
     /// Graph base URL (override for national clouds / tests).
     pub graph_base_url: String,
     /// Poll interval for active-chat refresh, in seconds.
@@ -26,6 +31,7 @@ impl Default for AppConfig {
         Self {
             client_id: None,
             tenant_id: "organizations".to_string(),
+            entra_authority: ENTRA_AUTHORITY.to_string(),
             graph_base_url: "https://graph.microsoft.com/v1.0".to_string(),
             poll_interval_secs: 15,
         }
@@ -47,6 +53,9 @@ impl AppConfig {
         if let Some(c) = table.get("client_id").and_then(|x| x.as_str()) {
             cfg.client_id = Some(c.to_string());
         }
+        if let Some(a) = table.get("entra_authority").and_then(|x| x.as_str()) {
+            cfg.entra_authority = a.to_string();
+        }
         if let Some(u) = table.get("graph_base_url").and_then(|x| x.as_str()) {
             cfg.graph_base_url = u.to_string();
         }
@@ -64,6 +73,9 @@ impl AppConfig {
         if let Some(v) = get("RUSTEAMS_TENANT_ID") {
             self.tenant_id = v;
         }
+        if let Some(v) = get("RUSTEAMS_ENTRA_AUTHORITY") {
+            self.entra_authority = v;
+        }
         if let Some(v) = get("RUSTEAMS_GRAPH_BASE_URL") {
             self.graph_base_url = v;
         }
@@ -80,6 +92,9 @@ impl AppConfig {
         }
         if let Some(v) = o.tenant_id {
             self.tenant_id = v;
+        }
+        if let Some(v) = o.entra_authority {
+            self.entra_authority = v;
         }
         if let Some(v) = o.graph_base_url {
             self.graph_base_url = v;
@@ -101,6 +116,7 @@ impl AppConfig {
 pub struct CliOverrides {
     pub client_id: Option<String>,
     pub tenant_id: Option<String>,
+    pub entra_authority: Option<String>,
     pub graph_base_url: Option<String>,
     pub poll_interval_secs: Option<u64>,
 }
@@ -139,6 +155,18 @@ mod tests {
         });
         assert_eq!(cli.tenant_id, "cli-tenant");
         assert_eq!(cli.poll_interval_secs, 30);
+    }
+
+    #[test]
+    fn entra_authority_overrides_for_tests_and_national_clouds() {
+        let file =
+            AppConfig::from_toml_str("entra_authority = \"https://login.example.com\"").unwrap();
+        assert_eq!(file.entra_authority, "https://login.example.com");
+        let mut m = HashMap::new();
+        m.insert("RUSTEAMS_ENTRA_AUTHORITY".to_string(), "https://entra.mock.local".to_string());
+        let with_env = file.with_env(&env(m));
+        assert_eq!(with_env.entra_authority, "https://entra.mock.local");
+        assert_eq!(AppConfig::default().entra_authority, ENTRA_AUTHORITY);
     }
 
     #[test]

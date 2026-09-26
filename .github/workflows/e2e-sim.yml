@@ -1,0 +1,43 @@
+name: e2e simulation
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - e2e/**
+      - src/**
+      - Cargo.toml
+      - Cargo.lock
+      - .github/workflows/e2e-sim.yml
+  pull_request:
+    paths:
+      - e2e/**
+      - src/**
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-sim-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sim:
+    name: Mock Entra + Graph simulation (no real Teams)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.89.0
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run full-usage simulation
+        run: bash e2e/simulate.sh

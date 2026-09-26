@@ -3,6 +3,20 @@
 All notable changes are documented here. Format follows Keep a Changelog; versioning
 is SemVer with `MVP ≠ 1.0.0`.
 
+## [Unreleased]
+
+### Added
+- HTTPS trust: built-in WebPKI roots plus optional `RUSTEAMS_CA_BUNDLE` PEM
+  bundle (fails closed on unreadable/invalid files, paths only in errors).
+- `RUSTEAMS_ENTRA_AUTHORITY` override (TOML `entra_authority`, CLI overrides,
+  shown by `rusteams config`); tenant is now appended to any bare-host
+  authority, not just `login.microsoftonline.com` (fixes national clouds).
+- File token store via `RUSTEAMS_TOKEN_FILE` (0600 JSON, sim/headless use only,
+  warn-logged; OS keyring remains the default).
+- `e2e/` full-usage simulation without real Teams: Scalar mock Graph
+  (`graph-openapi.yaml`), mock Entra device-code server, self-signed HTTPS
+  proxy, `simulate.sh` (10 checks: CLI assertions + pty paths), CI workflow.
+
 ## [0.2.0] — 2026-09-14 (MVP core gate)
 
 ### Added

@@ -29,7 +29,8 @@ async fn drill_refresh_exchanges_rotates_and_persists() {
 
     let store = MemoryStore::default();
     store.save_refresh_token("default", "rt-old").unwrap();
-    let client = RefreshClient::new(&server.uri(), "tenant", "client-id");
+    let client =
+        RefreshClient::new(&server.uri(), "tenant", "client-id").expect("drill: client builds");
     let access = refresh_session(&client, &store, "default").await.expect("drill: refresh works");
     assert_eq!(access, "at-new");
     assert_eq!(
@@ -43,7 +44,8 @@ async fn drill_refresh_exchanges_rotates_and_persists() {
 async fn drill_refresh_without_stored_token_fails_closed() {
     let server = MockServer::start().await;
     let store = MemoryStore::default();
-    let client = RefreshClient::new(&server.uri(), "tenant", "client-id");
+    let client =
+        RefreshClient::new(&server.uri(), "tenant", "client-id").expect("drill: client builds");
     let err = refresh_session(&client, &store, "default").await.expect_err("drill: no session");
     assert!(
         err.user_message().contains("login"),
@@ -64,7 +66,8 @@ async fn drill_rejected_refresh_is_an_auth_error() {
 
     let store = MemoryStore::default();
     store.save_refresh_token("default", "rt-stale").unwrap();
-    let client = RefreshClient::new(&server.uri(), "tenant", "client-id");
+    let client =
+        RefreshClient::new(&server.uri(), "tenant", "client-id").expect("drill: client builds");
     let err = refresh_session(&client, &store, "default").await.expect_err("drill: rejected");
     assert_eq!(err.user_message(), "authentication failed");
 }
