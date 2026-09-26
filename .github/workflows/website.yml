@@ -45,6 +45,24 @@ jobs:
           bunx tsc --version | grep -q "Version 7" || { echo "::error::TypeScript 7.x required"; exit 1; }
           bun pm ls typescript
 
+      - name: Validate site URL
+        env:
+          SITE_URL: ${{ vars.VITE_APP_SITE_NAME }}
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            echo "::error::VITE_APP_SITE_NAME repo variable is not set (Settings > Variables > Actions)"
+            exit 1
+          fi
+          case "$SITE_URL" in
+            https://*) ;;
+            *) echo "::error::VITE_APP_SITE_NAME must start with https:// (got: $SITE_URL)"; exit 1 ;;
+          esac
+          case "$SITE_URL" in
+            *example.com*|*localhost*|*ngrok*|*127.0.0.1*)
+              echo "::error::VITE_APP_SITE_NAME looks like a placeholder ($SITE_URL)"; exit 1 ;;
+          esac
+          echo "Site URL OK: $SITE_URL"
+
       - name: Lint
         run: bun run lint
 
@@ -55,7 +73,25 @@ jobs:
         run: bun run test
 
       - name: Build
+        env:
+          VITE_APP_SITE_NAME: ${{ vars.VITE_APP_SITE_NAME }}
         run: bun run build
+
+      # Crawlers need absolute OG URLs: fail if the build left a placeholder
+      # (Vite leaves %VITE_*% literal when the variable is undefined).
+      - name: Assert absolute OG tags
+        run: |
+          test -f dist/og-image.png
+          if grep -q '%VITE_' dist/index.html; then
+            echo "::error::dist/index.html still contains an unresolved Vite env placeholder"; exit 1
+          fi
+          flat=$(tr -d '\n' < dist/index.html | tr -s ' ')
+          echo "$flat" | grep -q 'property="og:image" content="https://[^"]*/og-image.png"' \
+            || { echo "::error::og:image is not an absolute https:// URL"; exit 1; }
+          echo "$flat" | grep -q 'name="twitter:image" content="https://[^"]*/og-image.png"' \
+            || { echo "::error::twitter:image is not an absolute https:// URL"; exit 1; }
+          echo "$flat" | grep -q 'property="og:url" content="https://[^"]*"' \
+            || { echo "::error::og:url is not an absolute https:// URL"; exit 1; }
 
       - name: Set version
         id: version
