@@ -26,3 +26,7 @@ rustc-ice-*.txt
 .env
 
 node_modules/
+
+# e2e simulation artefacts (local trust + session state, never committed)
+e2e/.certs/
+e2e/.sim-tokens.json

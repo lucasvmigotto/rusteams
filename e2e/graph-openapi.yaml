@@ -1,0 +1,472 @@
+openapi: 3.1.0
+info:
+  title: rusteams mock Microsoft Graph
+  version: 1.0.0
+  description: >-
+    Trimmed simulation of the Microsoft Graph surface rusteams actually calls.
+    Served by scalarapi/mock-server in e2e/. Stateless: canned responses per
+    request. Shapes mirror src/infra/graph/client.rs DTOs and the wiremock
+    fixtures in tests/graph_drills.rs. Never a substitute for live Graph.
+servers:
+  - url: /
+paths:
+  /me/chats:
+    get:
+      operationId: listChats
+      parameters:
+        - name: $expand
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chat list envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatEnvelope'
+              example:
+                value:
+                  - id: chat-1
+                    topic: Engineering
+                    lastMessagePreview:
+                      createdDateTime: '2026-09-14T12:00:00+00:00'
+                      body:
+                        content: 'hello from sim'
+                        contentType: text
+                  - id: chat-2
+                    topic: null
+  /me/chats/{chatId}/messages:
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: listMessages
+      parameters:
+        - name: $top
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: $filter
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Message list envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageEnvelope'
+              example:
+                value:
+                  - id: msg-1
+                    createdDateTime: '2026-09-14T12:00:00+00:00'
+                    lastModifiedDateTime: '2026-09-14T12:00:00+00:00'
+                    body:
+                      content: 'hello from sim'
+                      contentType: text
+                    from:
+                      user:
+                        displayName: Sim User
+                    mentions: []
+                  - id: msg-2
+                    createdDateTime: '2026-09-14T12:01:00+00:00'
+                    body:
+                      content: 'second message'
+                      contentType: text
+                    from:
+                      user:
+                        displayName: Sim User
+                    mentions: []
+    post:
+      operationId: sendMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Created message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                id: msg-sent-1
+                createdDateTime: '2026-09-14T12:02:00+00:00'
+                body:
+                  content: 'hello from sim'
+                  contentType: text
+                from:
+                  user:
+                    displayName: Me
+                mentions: []
+  /me/chats/{chatId}/messages/replyWithQuote:
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: replyWithQuote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Quoted reply created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                id: msg-quote-1
+                createdDateTime: '2026-09-14T12:03:00+00:00'
+                body:
+                  content: 'quoted reply'
+                  contentType: text
+                from:
+                  user:
+                    displayName: Me
+                mentions: []
+  /me/chats/{chatId}/messages/{messageId}:
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: getMessage
+      responses:
+        '200':
+          description: Single message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                id: msg-1
+                createdDateTime: '2026-09-14T12:00:00+00:00'
+                body:
+                  content: 'hello from sim'
+                  contentType: text
+                from:
+                  user:
+                    displayName: Sim User
+                mentions: []
+    patch:
+      operationId: updateMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '204':
+          description: Updated, no content (client re-GETs)
+  /me/chats/{chatId}/messages/{messageId}/softDelete:
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: softDeleteMessage
+      responses:
+        '204':
+          description: Soft-deleted
+  /me/chats/{chatId}/messages/{messageId}/setReaction:
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: setReaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '204':
+          description: Reaction set
+  /me/chats/{chatId}/messages/{messageId}/unsetReaction:
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: unsetReaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '204':
+          description: Reaction removed
+  /me/chats/{chatId}/messages/{messageId}/hostedContents:
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: listHostedContents
+      responses:
+        '200':
+          description: Hosted content refs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HostedContentEnvelope'
+              example:
+                value:
+                  - id: content-1
+                    contentType: image/png
+  /me/chats/{chatId}/messages/{messageId}/hostedContents/{contentId}/$value:
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: contentId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: getHostedContentValue
+      responses:
+        '200':
+          description: Raw hosted bytes (small)
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+  /search/query:
+    post:
+      operationId: searchMessages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Ranked search hits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+              example:
+                value:
+                  - hitsContainers:
+                      - hits:
+                          - hitId: msg-1
+                            summary: 'hello from sim'
+                            resource:
+                              id: msg-1
+                              chatId: chat-1
+                              subject: Engineering
+  /me/presence:
+    get:
+      operationId: getPresence
+      responses:
+        '200':
+          description: Own presence
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  availability:
+                    type: string
+              example:
+                availability: Available
+components:
+  schemas:
+    ItemBody:
+      type: object
+      properties:
+        content:
+          type: string
+        contentType:
+          type: string
+    Preview:
+      type: object
+      properties:
+        createdDateTime:
+          type: string
+          format: date-time
+        body:
+          $ref: '#/components/schemas/ItemBody'
+    Chat:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        topic:
+          type: ['string', 'null']
+        lastMessagePreview:
+          $ref: '#/components/schemas/Preview'
+    ChatEnvelope:
+      type: object
+      properties:
+        value:
+          type: array
+          items:
+            $ref: '#/components/schemas/Chat'
+        '@odata.nextLink':
+          type: ['string', 'null']
+    FromUser:
+      type: object
+      properties:
+        displayName:
+          type: string
+    From:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/FromUser'
+    Mention:
+      type: object
+      properties:
+        mentionText:
+          type: string
+        mentioned:
+          type: object
+    Message:
+      type: object
+      required: [id, createdDateTime]
+      properties:
+        id:
+          type: string
+        createdDateTime:
+          type: string
+          format: date-time
+        lastModifiedDateTime:
+          type: string
+          format: date-time
+        body:
+          $ref: '#/components/schemas/ItemBody'
+        from:
+          $ref: '#/components/schemas/From'
+        mentions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Mention'
+    MessageEnvelope:
+      type: object
+      properties:
+        value:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        '@odata.nextLink':
+          type: ['string', 'null']
+    HostedContent:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        contentType:
+          type: string
+    HostedContentEnvelope:
+      type: object
+      properties:
+        value:
+          type: array
+          items:
+            $ref: '#/components/schemas/HostedContent'
+    SearchHit:
+      type: object
+      properties:
+        hitId:
+          type: string
+        summary:
+          type: string
+        resource:
+          type: object
+          properties:
+            id:
+              type: string
+            chatId:
+              type: string
+            subject:
+              type: string
+    SearchResponse:
+      type: object
+      properties:
+        value:
+          type: array
+          items:
+            type: object
+            properties:
+              hitsContainers:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    hits:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/SearchHit'
