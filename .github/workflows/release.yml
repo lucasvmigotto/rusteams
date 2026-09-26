@@ -124,7 +124,7 @@ jobs:
           VERSION="$(bash scripts/ci/extract-version.sh)"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Fetch verified build artifacts (no recompilation)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: release-dist-*
           path: artifacts/
