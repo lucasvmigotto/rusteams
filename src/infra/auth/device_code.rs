@@ -58,6 +58,17 @@ pub fn classify_poll_error(body: &str) -> Result<PollOutcome, AppError> {
     }
 }
 
+/// Join tenant onto an authority base: Entra requires `{authority}/{tenant}`
+/// for every cloud (public, national, mock). A base that already carries a
+/// path is used as-is; a bare host gets the tenant appended.
+pub(crate) fn join_authority(authority_base: &str, tenant: &str) -> String {
+    let base = authority_base.trim_end_matches('/');
+    match reqwest::Url::parse(base) {
+        Ok(url) if url.path().is_empty() || url.path() == "/" => format!("{base}/{tenant}"),
+        _ => base.to_string(),
+    }
+}
+
 /// MVP delegated scopes for chat + presence + offline refresh.
 pub fn default_scopes() -> String {
     [
@@ -97,5 +108,19 @@ mod tests {
     fn scopes_include_offline_access_for_refresh() {
         assert!(default_scopes().contains("offline_access"));
         assert!(default_scopes().contains("Chat.ReadWrite"));
+    }
+
+    #[test]
+    fn tenant_is_appended_to_bare_hosts_only() {
+        assert_eq!(
+            join_authority("https://login.microsoftonline.com", "t"),
+            "https://login.microsoftonline.com/t"
+        );
+        assert_eq!(
+            join_authority("https://login.chinacloudapi.cn/", "t"),
+            "https://login.chinacloudapi.cn/t"
+        );
+        assert_eq!(join_authority("http://127.0.0.1:8080", "t"), "http://127.0.0.1:8080/t");
+        assert_eq!(join_authority("https://mock/x/tenant-path", "t"), "https://mock/x/tenant-path");
     }
 }
