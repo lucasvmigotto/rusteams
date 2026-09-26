@@ -1,0 +1,62 @@
+name: e2e simulation
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - e2e/**
+      - src/**
+      - Cargo.toml
+      - Cargo.lock
+      - .github/workflows/e2e-sim.yml
+  pull_request:
+    paths:
+      - e2e/**
+      - src/**
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-sim-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sim:
+    name: Mock Entra + Graph simulation (no real Teams)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # Deterministic engine: the runner's Docker (creds below apply to it),
+      # not whatever podman the image happens to ship.
+      CONTAINER_ENGINE: docker
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.89.0
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.DOCKER_HUB_PAT }}
+
+      # Hardened Images live in their own registry (dhi.io), not Docker Hub;
+      # the sim stack's Bun and nginx bases are pulled from there.
+      - name: Login to Docker Hardened Images
+        uses: docker/login-action@v3
+        with:
+          registry: dhi.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.DOCKER_HUB_PAT }}
+
+      - name: Run full-usage simulation
+        run: bash e2e/simulate.sh
