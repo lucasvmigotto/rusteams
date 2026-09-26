@@ -1,3 +1,4 @@
+import { TuiShot } from "../components/TuiShot";
 import { Breadcrumbs, Callout, Section, StatusBadge, Table } from "../components/ui";
 import { KEYBINDINGS } from "../content/shared";
 import { useLocale } from "../i18n/useLocale";
@@ -17,6 +18,12 @@ export function Usage() {
       <Section id="tui" title="TUI">
         <p>{page.tuiBodyA}</p>
         <p>{page.tuiBodyB}</p>
+        <TuiShot
+          id="read"
+          alt={page.tuiShotAlt}
+          caption={page.tuiShotCaption}
+          transcript={page.tuiShotTranscript}
+        />
       </Section>
 
       <Section id="shortcuts" title={page.shortcutsTitle}>

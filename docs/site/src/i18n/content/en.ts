@@ -52,6 +52,11 @@ export const enDocs: DocsContent = {
       "Header (title + connection), sidebar (30%), conversation (70%), and a status bar with hints + version. Empty states show hints, never panic. Connection: Connected, Degraded, Disconnected, Reconnecting, or Syncing.",
     tuiBodyB:
       "Messages render styled segments: underlined links with visible URL, bold indented code blocks, plain-text fallback. All remote text passes the sanitizer (C0/CSI/OSC/controls stripped).",
+    tuiShotAlt: "Terminal screenshot of the rusteams read view",
+    tuiShotCaption:
+      "Read view rendered by the real TUI code (80×24): sidebar with two chats (Family has unread), conversation with two messages, status bar confirming a send. Regenerated from TestBackend output, never hand-drawn.",
+    tuiShotTranscript:
+      "Header reads rusteams, Connected. Sidebar lists Engineering (selected) and Family with an unread flag. Conversation shows Alice at 10:32 saying Hello, Teams, and Bob at 10:33 saying Standup moved to 11:00. Status bar shows navigation hints, the version, and a message-sent notice.",
     shortcutsTitle: "Keyboard shortcuts",
     boundNote: {
       title: "Bound ≠ working",

@@ -53,6 +53,11 @@ export const ptBrDocs: DocsContent = {
       "Cabeçalho (título + conexão), barra lateral (30%), conversa (70%) e barra de status com dicas + versão. Estados vazios mostram hints, nunca panic. Conexão: Connected, Degraded, Disconnected, Reconnecting ou Syncing.",
     tuiBodyB:
       "Mensagens renderizam segmentos estilizados: links sublinhados com URL visível, blocos de código em negrito indentados, fallback em texto puro. Todo texto remoto passa pelo sanitizador (C0/CSI/OSC/controles removidos).",
+    tuiShotAlt: "Captura de terminal da visão de leitura do rusteams",
+    tuiShotCaption:
+      "Visão de leitura renderizada pelo código real da TUI (80×24): barra lateral com dois chats (Family com não-lidas), conversa com duas mensagens, barra de status confirmando um envio. Regenerada da saída do TestBackend, nunca desenhada à mão.",
+    tuiShotTranscript:
+      "Cabeçalho mostra rusteams, Connected. A barra lateral lista Engineering (selecionado) e Family com flag de não-lida. A conversa mostra Alice às 10:32 dizendo Hello, Teams, e Bob às 10:33 dizendo Standup moved to 11:00. A barra de status mostra dicas de navegação, a versão e um aviso de mensagem enviada.",
     shortcutsTitle: "Atalhos de teclado",
     boundNote: {
       title: "Mapeado ≠ funcional",
