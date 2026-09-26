@@ -6,10 +6,14 @@ target/
 .vscode/
 .idea/
 *.md
-docs/
 tests/
 benches/
 examples/
 scripts/
+# docs/ is needed by docs/site/Dockerfile (context is the repo root), so it is
+# not ignored wholesale — only the heavy subdirectories are.
+docs/site/node_modules/
+docs/site/dist/
+docs/site/.certs/
 # NOTE: dist/ is intentionally NOT ignored — CI stages verified release
 # binaries there before `docker build`.
