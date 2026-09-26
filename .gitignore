@@ -24,6 +24,9 @@ rustc-ice-*.txt
 #.idea/
 
 .env
+# The site's public origin is not a secret — Vite env vars are exposed in the
+# built client anyway — so docs/site ships a committed default.
+!docs/site/.env
 
 node_modules/
 

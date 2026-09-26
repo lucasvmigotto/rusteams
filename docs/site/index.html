@@ -8,17 +8,32 @@
       content="rusteams documentation — Microsoft Teams for the terminal. Installation, authentication, TUI usage, architecture, and reference."
     />
     <meta name="theme-color" content="#0A0F1C" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>rusteams — Teams for the terminal</title>
+
+    <!-- Open Graph: crawlers read this static file (no JS), so image and URL
+         must be absolute. %VITE_APP_SITE_NAME% is substituted by Vite at
+         build time from the VITE_APP_SITE_NAME env var. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="rusteams" />
     <meta property="og:title" content="rusteams — Teams for the terminal" />
     <meta
       property="og:description"
       content="Official documentation for rusteams: install, authenticate, chat from your terminal."
     />
-    <meta property="og:image" content="/og-image.png" />
-    <meta property="og:type" content="website" />
+    <meta property="og:url" content="%VITE_APP_SITE_NAME%/" />
+    <meta property="og:image" content="%VITE_APP_SITE_NAME%/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="rusteams — Microsoft Teams for the terminal" />
+
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="/og-image.png" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>rusteams — Teams for the terminal</title>
+    <meta name="twitter:title" content="rusteams — Teams for the terminal" />
+    <meta
+      name="twitter:description"
+      content="Official documentation for rusteams: install, authenticate, chat from your terminal."
+    />
+    <meta name="twitter:image" content="%VITE_APP_SITE_NAME%/og-image.png" />
   </head>
   <body>
     <div id="root"></div>
