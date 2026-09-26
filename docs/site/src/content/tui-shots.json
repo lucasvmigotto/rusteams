@@ -1,0 +1,179 @@
+{
+  "_generated": "cargo run --example tui_snapshot — do not hand-edit",
+  "shots": {
+    "read": {
+      "height": 24,
+      "rows": [
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "rusteams  ● Connected                                                           "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "● Engineering          │Alice [10:32]                                           "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "  Family *             │Hello, Teams!                                           "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │Bob [10:33]                                             "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │Standup moved to 11:00.                                 "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "                       │                                                        "
+          }
+        ],
+        [
+          {
+            "bg": "reset",
+            "fg": "reset",
+            "t": "j/k move · Enter open · / palette · Ctrl+Q quit · rusteams 0.2.0 · message sent "
+          }
+        ]
+      ],
+      "width": 80
+    }
+  }
+}
