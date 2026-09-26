@@ -33,7 +33,7 @@ thiserror = "2"
 async-trait = "0.1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
-keyring = "3"
+keyring = "4"
 chrono = { version = "0.4", features = ["serde", "clock"] }
 url = "2"
 dirs = "7"
