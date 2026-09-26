@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - website/**
+      - docs/site/**
       - Cargo.toml
       - .github/workflows/website.yml
   workflow_dispatch:
@@ -24,7 +24,7 @@ jobs:
       contents: read
     defaults:
       run:
-        working-directory: website
+        working-directory: docs/site
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
 
@@ -60,7 +60,7 @@ jobs:
       - name: Set version
         id: version
         run: |
-          VERSION=$(bun -e "const m = require('fs').readFileSync('../Cargo.toml','utf8').match(/^version\s*=\s*\"([^\"]+)\"/m); console.log(m[1])")
+          VERSION=$(bun -e "const m = require('fs').readFileSync('../../Cargo.toml','utf8').match(/^version\s*=\s*\"([^\"]+)\"/m); console.log(m[1])")
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Upload dist artifact
@@ -68,7 +68,7 @@ jobs:
         with:
           name: rusteams-website-${{ steps.version.outputs.VERSION }}
           path: |
-            website/dist/
+            docs/site/dist/
           retention-days: 7
           if-no-files-found: error
 
