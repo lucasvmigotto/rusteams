@@ -12,6 +12,11 @@ account, no network beyond localhost, no secrets.
 | `nginx-https.conf` | TLS terminator (self-signed sim CA) — MS SSO flows are HTTPS-only, hence the proxy | `e2e/.certs/` is gitignored |
 | `simulate.sh` | Orchestrates: certs → stack → CLI assertions → pty checks → teardown | Fails loudly on first mismatch |
 
+Two engine paths, auto-selected by `CONTAINER_ENGINE` (or podman-then-docker
+detection): **podman** runs the three containers in one pod sharing
+`localhost` (upstreams never go stale); **docker** uses `compose.yml` with
+compose DNS (`nginx-https.docker.conf`). CI pins `CONTAINER_ENGINE=docker`.
+
 ## Run it
 
 ```bash
@@ -26,6 +31,14 @@ Environment used (all local, all fake): `RUSTEAMS_CLIENT_ID=sim-client`,
 `RUSTEAMS_TOKEN_FILE=e2e/.sim-tokens.json` (removed afterwards).
 Localhost with per-service ports keeps system DNS out of the picture; the
 sim certificate carries both localhost and the `.mock.local` SANs.
+
+## CI auth
+
+The Bun and nginx bases come from `dhi.io` (Docker Hardened Images), which is
+a **separate registry from Docker Hub** — a Docker Hub login does not
+authorize `dhi.io` pulls. `e2e-sim.yml` therefore logs in to both, using
+`secrets.DOCKER_HUB_PAT` (the account needs DHI entitlement). Pin the engine
+to Docker so those credentials reach the client doing the pull.
 
 ## Constraints (read before extending)
 
