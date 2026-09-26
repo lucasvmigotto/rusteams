@@ -45,7 +45,7 @@ async fn drill_search_maps_hits_with_sanitized_summaries() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let hits = client.search_messages("report", 10).await.expect("drill: search works");
     assert_eq!(hits.len(), 2);
     assert_eq!(hits[0].message_id, "m1");
@@ -65,7 +65,7 @@ async fn drill_empty_search_returns_no_hits() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let hits = client.search_messages("nothing-matches-xyz", 10).await.expect("drill: empty ok");
     assert!(hits.is_empty());
 }

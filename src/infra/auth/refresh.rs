@@ -20,13 +20,12 @@ pub struct RefreshClient {
 
 impl RefreshClient {
     /// Same authority convention as [`super::client::DeviceCodeClient`].
-    pub fn new(authority_base: &str, tenant: &str, client_id: &str) -> Self {
-        let authority = if authority_base.contains("login.microsoftonline.com") {
-            format!("{}/{}", authority_base.trim_end_matches('/'), tenant)
-        } else {
-            authority_base.trim_end_matches('/').to_string()
-        };
-        Self { http: reqwest::Client::new(), authority, client_id: client_id.to_string() }
+    pub fn new(authority_base: &str, tenant: &str, client_id: &str) -> Result<Self, AppError> {
+        Ok(Self {
+            http: crate::infra::http::build_client()?,
+            authority: super::device_code::join_authority(authority_base, tenant),
+            client_id: client_id.to_string(),
+        })
     }
 
     /// Exchange one refresh token. Rejection maps to a fixed auth error —

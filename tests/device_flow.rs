@@ -43,7 +43,8 @@ async fn drill_device_flow_polls_until_token() {
         .mount(&server)
         .await;
 
-    let client = DeviceCodeClient::new(&server.uri(), "tenant", "client-id");
+    let client =
+        DeviceCodeClient::new(&server.uri(), "tenant", "client-id").expect("drill: client builds");
     let code = client.request_code(&default_scopes()).await.expect("drill: code issued");
     assert_eq!(code.user_code, "ABCD-EFGH");
     let token = client.poll_for_token(&code, 5).await.expect("drill: token issued");
@@ -76,7 +77,8 @@ async fn drill_slow_down_extends_interval_and_still_succeeds() {
         .mount(&server)
         .await;
 
-    let client = DeviceCodeClient::new(&server.uri(), "tenant", "client-id");
+    let client =
+        DeviceCodeClient::new(&server.uri(), "tenant", "client-id").expect("drill: client builds");
     let code = client.request_code(&default_scopes()).await.expect("drill: code issued");
     let token = client.poll_for_token(&code, 5).await.expect("drill: slow_down tolerated");
     assert_eq!(token.access_token, "at-1");
@@ -97,7 +99,8 @@ async fn drill_expired_flow_is_an_auth_error() {
         .mount(&server)
         .await;
 
-    let client = DeviceCodeClient::new(&server.uri(), "tenant", "client-id");
+    let client =
+        DeviceCodeClient::new(&server.uri(), "tenant", "client-id").expect("drill: client builds");
     let code = client.request_code(&default_scopes()).await.expect("drill: code issued");
     let err = client.poll_for_token(&code, 3).await.expect_err("drill: expiry fails");
     assert_eq!(err.user_message(), "authentication failed");
