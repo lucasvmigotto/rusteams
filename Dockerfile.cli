@@ -1,0 +1,51 @@
+# syntax=docker/dockerfile:1
+#
+# rusteams CLI self-contained image.
+#
+# Unlike the release Dockerfile (which packages a CI-built binary), this
+# image compiles the binary itself from a dhi.io Rust builder, so any
+# checkout builds a working image with no prior artifacts.
+#
+# Debian alignment matters: dhi.io/rust:1.89.0 is Debian 13 based, so the
+# runtime must be cc-debian13 — a trixie glibc binary will not start on
+# cc-debian12. Both bases are digest-pinned (see ADR-009).
+#
+# Build (repo root):
+#   docker build -f Dockerfile.cli . -t rusteams-cli:test
+#
+# Run (headless smoke, no TTY/secrets needed):
+#   docker run --rm rusteams-cli:test version
+#   docker run --rm rusteams-cli:test --help
+
+ARG RUST_VERSION=1.89.0
+ARG RUSTEAMS_VERSION=0.0.0
+
+FROM dhi.io/rust:${RUST_VERSION} AS builder
+
+# dhi Hardened Images default to nonroot; the build needs write access.
+USER root
+
+WORKDIR /src
+
+COPY Cargo.toml Cargo.lock ./
+COPY src/ ./src/
+
+RUN cargo build --release --locked
+
+FROM gcr.io/distroless/cc-debian13@sha256:4594d59540d1948417f6ca2829ddd9294493a7c68b7528f4dd459de7f203a750
+
+ARG RUSTEAMS_VERSION
+
+LABEL org.opencontainers.image.title="rusteams-cli" \
+      org.opencontainers.image.description="Terminal client for Microsoft Teams (self-contained dhi build)" \
+      org.opencontainers.image.version="${RUSTEAMS_VERSION}" \
+      org.opencontainers.image.source="https://github.com/lucasvmigotto/rusteams" \
+      org.opencontainers.image.licenses="GPL-3.0-or-later"
+
+# Explicit non-root (distroless :nonroot already defaults to 65532).
+USER 65532:65532
+
+COPY --from=builder /src/target/release/rusteams /usr/local/bin/rusteams
+
+ENTRYPOINT ["/usr/local/bin/rusteams"]
+CMD ["--help"]
