@@ -63,8 +63,11 @@ export function GettingStarted() {
           rows={[
             ["RUSTEAMS_CLIENT_ID", "Entra app ID (required for login)."],
             ["RUSTEAMS_TENANT_ID", "Default: organizations."],
+            ["RUSTEAMS_ENTRA_AUTHORITY", "Default: https://login.microsoftonline.com."],
             ["RUSTEAMS_GRAPH_BASE_URL", "Default: https://graph.microsoft.com/v1.0."],
             ["RUSTEAMS_POLL_INTERVAL_SECS", "Default 15, minimum 1."],
+            ["RUSTEAMS_CA_BUNDLE", "Extra PEM CA bundle. Unset by default."],
+            ["RUSTEAMS_TOKEN_FILE", "File token store (sim/headless only). Unset by default."],
             ["RUST_LOG", "Default: rusteams=info."],
           ]}
         />
