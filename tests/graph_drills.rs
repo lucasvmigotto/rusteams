@@ -20,7 +20,7 @@ async fn drill_lists_chats_from_graph_envelope() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let chats = client.list_chats().await.expect("drill: list_chats works");
     assert_eq!(chats.len(), 2);
     assert_eq!(chats[0].id, "chat-1");
@@ -42,7 +42,7 @@ async fn drill_retries_once_after_429_then_succeeds() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let chats = client.list_chats().await.expect("drill: 429 is retried");
     assert_eq!(chats.len(), 1);
     assert_eq!(chats[0].id, "chat-9");
@@ -67,7 +67,7 @@ async fn drill_follows_next_link_pages() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let chats = client.list_chats().await.expect("drill: pages followed");
     let ids: Vec<&str> = chats.iter().map(|c| c.id.as_str()).collect();
     assert_eq!(ids, vec!["chat-1", "chat-2"]);
@@ -78,7 +78,7 @@ async fn drill_rejects_unauthorized_without_retry() {
     let server = MockServer::start().await;
     Mock::given(method("GET")).respond_with(ResponseTemplate::new(401)).mount(&server).await;
 
-    let client = GraphClient::new(&server.uri(), "bad-token");
+    let client = GraphClient::new(&server.uri(), "bad-token").expect("drill: client builds");
     let err = client.list_chats().await.expect_err("drill: 401 fails");
     assert_eq!(err.user_message(), "authentication failed");
 }
@@ -91,7 +91,7 @@ async fn drill_rejects_malformed_payload() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let err = client.list_chats().await.expect_err("drill: garbage fails");
     assert!(err.to_string().contains("malformed"));
 }
@@ -143,7 +143,7 @@ async fn drill_lists_messages_with_sanitized_bodies() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let msgs = client.list_messages("chat-1").await.expect("drill: list works");
     assert_eq!(msgs.len(), 2);
     assert_eq!(msgs[0].chat_id, "chat-1");
@@ -159,7 +159,7 @@ async fn drill_send_returns_created_message() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let msg = client.send_message("chat-1", "sent!").await.expect("drill: send works");
     assert_eq!(msg.id, "m9");
     assert_eq!(msg.body, "sent!");
@@ -182,7 +182,7 @@ async fn drill_adapter_serves_provider_traits() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let provider: &dyn ChatProvider = &client;
     assert_eq!(provider.list_chats().await.expect("drill: trait list").len(), 1);
     let presence: &dyn PresenceProvider = &client;
@@ -202,7 +202,7 @@ async fn drill_update_returns_confirmed_message() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let msg = client.update_message("chat-1", "m1", "edited").await.expect("drill: update works");
     assert_eq!(msg.id, "m1");
     assert_eq!(msg.body, "edited");
@@ -213,7 +213,7 @@ async fn drill_delete_and_reactions_succeed() {
     let server = MockServer::start().await;
     Mock::given(method("POST")).respond_with(ResponseTemplate::new(204)).mount(&server).await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     client.delete_message("chat-1", "m1").await.expect("drill: delete works");
     client.set_reaction("chat-1", "m1", "like").await.expect("drill: react works");
     client.unset_reaction("chat-1", "m1", "like").await.expect("drill: unreact works");
@@ -227,7 +227,7 @@ async fn drill_reply_with_quote_returns_created_message() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let msg = client
         .reply_with_quote("chat-1", &["m1".to_string()], "quoting you")
         .await
@@ -248,7 +248,7 @@ async fn drill_hosted_content_returns_typed_bytes() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let content =
         client.get_hosted_content("chat-1", "m1", "h1").await.expect("drill: hosted works");
     assert_eq!(content.content_type, "image/png");
@@ -283,7 +283,7 @@ async fn drill_send_mention_posts_html_with_at_tag() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let msg = client
         .send_mention("chat-1", "hi ", "user-1", "Alice")
         .await
@@ -301,7 +301,7 @@ async fn drill_lists_hosted_contents() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let list = client.list_hosted_contents("chat-1", "m1").await.expect("drill: hosted list works");
     assert_eq!(list, vec![("h1".to_string(), "image/png".to_string())]);
 }
@@ -316,7 +316,7 @@ async fn drill_mention_maps_to_at_name_and_mention() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let msgs = client.list_messages("chat-1").await.expect("drill: mention list works");
     assert_eq!(msgs.len(), 1);
     assert_eq!(msgs[0].body, "hi @Alice, review this");
@@ -341,7 +341,7 @@ async fn drill_incremental_poll_uses_filter_and_top() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let since = Utc.timestamp_opt(1_789_380_000, 0).unwrap();
     let msgs = client.list_messages_since("c1", since, 25).await.expect("drill: incremental works");
     assert_eq!(msgs.len(), 1);
@@ -365,7 +365,7 @@ async fn drill_preview_hydrates_chat_list() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let chats = client.list_chats().await.expect("drill: preview list works");
     assert_eq!(chats.len(), 1);
     assert_eq!(chats[0].last_message_preview.as_deref(), Some("latest news"));
@@ -380,7 +380,7 @@ async fn drill_single_message_hydrates_search_hit() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let msg = client.get_message("chat-1", "m9").await.expect("drill: hydrate works");
     assert_eq!(msg.body, "full body");
     assert_eq!(msg.chat_id, "chat-1");
@@ -408,7 +408,7 @@ async fn drill_send_file_reference_posts_attachment_payload() {
         .mount(&server)
         .await;
 
-    let client = GraphClient::new(&server.uri(), "test-token");
+    let client = GraphClient::new(&server.uri(), "test-token").expect("drill: client builds");
     let msg = client
         .send_file_reference(
             "chat-1",

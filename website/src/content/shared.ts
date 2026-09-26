@@ -14,10 +14,19 @@ export const ENV_VARS = [
   ["RUSTEAMS_CLIENT_ID", "Entra public-client application (client) ID. Required for login."],
   ["RUSTEAMS_TENANT_ID", "Entra tenant. Default: organizations."],
   [
+    "RUSTEAMS_ENTRA_AUTHORITY",
+    "Entra authority base URL. Default: https://login.microsoftonline.com.",
+  ],
+  [
     "RUSTEAMS_GRAPH_BASE_URL",
     "Microsoft Graph base URL. Default: https://graph.microsoft.com/v1.0.",
   ],
   ["RUSTEAMS_POLL_INTERVAL_SECS", "Polling interval in seconds. Default: 15, minimum: 1."],
+  ["RUSTEAMS_CA_BUNDLE", "Extra PEM CA bundle path. Unset by default (WebPKI roots only)."],
+  [
+    "RUSTEAMS_TOKEN_FILE",
+    "File token store path (sim/headless only). Unset by default (OS keyring).",
+  ],
   ["RUST_LOG", "Log filter. Default: rusteams=info."],
 ] as const;
 

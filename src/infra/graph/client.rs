@@ -216,12 +216,12 @@ fn sanitize_segments(segments: &mut [crate::domain::RichSegment]) {
 }
 
 impl GraphClient {
-    pub fn new(base: &str, token: &str) -> Self {
-        Self {
-            http: reqwest::Client::new(),
+    pub fn new(base: &str, token: &str) -> Result<Self, AppError> {
+        Ok(Self {
+            http: crate::infra::http::build_client()?,
             base: base.trim_end_matches('/').to_string(),
             token: token.to_string(),
-        }
+        })
     }
 
     fn auth(&self, req: reqwest::RequestBuilder) -> reqwest::RequestBuilder {

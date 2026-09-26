@@ -1,0 +1,34 @@
+services:
+  graph-mock:
+    image: docker.io/scalarapi/mock-server:0.2.55
+    volumes:
+      - ./graph-openapi.yaml:/docs/openapi.yaml:ro
+    expose:
+      - "3000"
+    restart: unless-stopped
+
+  entra-mock:
+    image: dhi.io/bun:1-debian13-dev
+    working_dir: /app
+    volumes:
+      - ./mock-oauth2:/app:ro
+    command: ["bun", "server.ts"]
+    environment:
+      PORT: "8080"
+      PENDING_POLLS: "2"
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+  https-proxy:
+    image: dhi.io/nginx:1-alpine
+    volumes:
+      - ./nginx-https.docker.conf:/etc/nginx/nginx.conf:ro
+      - ./.certs:/etc/nginx/certs:ro
+    ports:
+      - "127.0.0.1:8443:8443"
+      - "127.0.0.1:8444:8444"
+    depends_on:
+      - graph-mock
+      - entra-mock
+    restart: unless-stopped
