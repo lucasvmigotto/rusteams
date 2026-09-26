@@ -7,7 +7,7 @@
 # no SPA fallback rewrites needed.
 #
 # Build from the repo root (version is read from Cargo.toml at build time):
-#   docker build -f website/Dockerfile . -t rusteams-website:test
+#   docker build -f docs/site/Dockerfile . -t rusteams-website:test
 #
 # Run:
 #   docker run --rm -p 8080:8080 rusteams-website:test
@@ -16,14 +16,14 @@ FROM dhi.io/bun:1-debian13-dev AS builder
 
 WORKDIR /app
 
-# Version source of truth lives outside website/ — copy only this file.
+# Version source of truth lives outside docs/site/ — copy only this file.
 COPY Cargo.toml ./
-COPY website/package.json website/bun.lock ./website/
-RUN bun install --frozen-lockfile --cwd website
+COPY docs/site/package.json docs/site/bun.lock ./docs/site/
+RUN bun install --frozen-lockfile --cwd docs/site
 
-COPY website/ ./website/
+COPY docs/site/ ./docs/site/
 
-RUN bun run --cwd website build
+RUN bun run --cwd docs/site build
 
 FROM dhi.io/nginx:1-alpine
 
@@ -33,9 +33,9 @@ LABEL org.opencontainers.image.title="rusteams-website" \
       org.opencontainers.image.licenses="GPL-3.0-or-later"
 
 # Vite static output (single index.html + content-hashed assets).
-COPY --from=builder /app/website/dist /usr/share/nginx/html
+COPY --from=builder /app/docs/site/dist /usr/share/nginx/html
 
-COPY website/nginx.conf /etc/nginx/nginx.conf
+COPY docs/site/nginx.conf /etc/nginx/nginx.conf
 
 USER nginx
 
