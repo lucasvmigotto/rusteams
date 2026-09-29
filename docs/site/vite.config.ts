@@ -16,6 +16,7 @@ if (!match?.[1]) {
 const RUSTEAMS_VERSION: string = match[1];
 
 export default defineConfig({
+  base: "/rusteams/",
   plugins: [tailwindcss(), react()],
   resolve: {
     alias: {
