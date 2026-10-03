@@ -82,7 +82,9 @@ function Shell() {
   ];
 
   return (
-    <HashRouter basename="/rusteams">
+    // Matches the docs-hub prefix (ADR 0001 in lucas/docs); derived from the
+    // Vite base so it tracks VITE_BASE_PATH.
+    <HashRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "")}>
       <Routes>
         <Route element={<Layout searchIndex={searchIndex} />}>
           <Route index element={<Overview />} />
