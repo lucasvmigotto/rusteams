@@ -119,6 +119,9 @@ jobs:
     needs: [ci]
     permissions:
       contents: read
+    environment:
+      name: rusteams-docs
+      url: https://docs.lucasvmigotto.me/rusteams/
     env:
       AWS_ACCESS_KEY_ID: ${{ vars.CLOUDFLARE_R2_ACCOUNT_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_ACCOUNT_SECRET }}
