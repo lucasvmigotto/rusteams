@@ -18,6 +18,7 @@ import { Usage } from "./pages/Usage";
 
 // HashRouter: R2 static hosting has no SPA fallback rewrites,
 // so hash-based routing keeps deep links working with zero server config.
+// basename matches the docs-hub prefix (ADR 0001 in lucas/docs).
 function Shell() {
   const { t } = useLocale();
   const searchIndex: SearchEntry[] = [
@@ -81,7 +82,9 @@ function Shell() {
   ];
 
   return (
-    <HashRouter>
+    // Matches the docs-hub prefix (ADR 0001 in lucas/docs); derived from the
+    // Vite base so it tracks VITE_BASE_PATH.
+    <HashRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "")}>
       <Routes>
         <Route element={<Layout searchIndex={searchIndex} />}>
           <Route index element={<Overview />} />

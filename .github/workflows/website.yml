@@ -47,19 +47,12 @@ jobs:
 
       - name: Validate site URL
         env:
-          SITE_URL: ${{ vars.VITE_APP_SITE_NAME }}
+          # Derived from the repo name: https://docs.lucasvmigotto.me/<repo>.
+          SITE_URL: https://docs.lucasvmigotto.me/${{ github.event.repository.name }}
         run: |
-          if [ -z "$SITE_URL" ]; then
-            echo "::error::VITE_APP_SITE_NAME repo variable is not set (Settings > Variables > Actions)"
-            exit 1
-          fi
           case "$SITE_URL" in
             https://*) ;;
-            *) echo "::error::VITE_APP_SITE_NAME must start with https:// (got: $SITE_URL)"; exit 1 ;;
-          esac
-          case "$SITE_URL" in
-            *example.com*|*localhost*|*ngrok*|*127.0.0.1*)
-              echo "::error::VITE_APP_SITE_NAME looks like a placeholder ($SITE_URL)"; exit 1 ;;
+            *) echo "::error::site URL must start with https:// (got: $SITE_URL)"; exit 1 ;;
           esac
           echo "Site URL OK: $SITE_URL"
 
@@ -74,7 +67,8 @@ jobs:
 
       - name: Build
         env:
-          VITE_APP_SITE_NAME: ${{ vars.VITE_APP_SITE_NAME }}
+          VITE_APP_SITE_NAME: https://docs.lucasvmigotto.me/${{ github.event.repository.name }}
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
         run: bun run build
 
       # Crawlers need absolute OG URLs: fail if the build left a placeholder
@@ -92,6 +86,17 @@ jobs:
             || { echo "::error::twitter:image is not an absolute https:// URL"; exit 1; }
           echo "$flat" | grep -q 'property="og:url" content="https://[^"]*"' \
             || { echo "::error::og:url is not an absolute https:// URL"; exit 1; }
+
+      - name: Guard prefix-scoped R2 deploy
+        run: |
+          # Fitness function (ADR 0001 in lucas/docs): every R2 sync/cp must be
+          # prefix-scoped, so a project can never wipe the shared bucket root.
+          bad=$(grep -nE '^[[:space:]]+aws s3 (sync|cp)' .github/workflows/website.yml | grep -v 'R2_PREFIX' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::root-scoped R2 target detected — every deploy must use \$R2_PREFIX"
+            echo "$bad"
+            exit 1
+          fi
 
       - name: Set version
         id: version
@@ -114,6 +119,19 @@ jobs:
     needs: [ci]
     permissions:
       contents: read
+    environment:
+      name: rusteams-docs
+      url: https://docs.lucasvmigotto.me/rusteams/
+    env:
+      AWS_ACCESS_KEY_ID: ${{ vars.CLOUDFLARE_R2_ACCOUNT_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_ACCOUNT_SECRET }}
+      AWS_DEFAULT_REGION: auto
+      AWS_EC2_METADATA_DISABLED: "true"
+      R2_ENDPOINT: ${{ vars.CLOUDFLARE_R2_ENDPOINT_S3_CLIENT }}
+      R2_BUCKET: ${{ vars.CLOUDFLARE_R2_BUCKET_ID }}
+      # Per-project prefix in the shared docs-hub bucket (ADR 0001). The slug
+      # is the repository name — no per-repo configuration, cannot drift.
+      R2_PREFIX: /${{ github.event.repository.name }}/
 
     steps:
       - name: Download dist artifact
@@ -122,16 +140,23 @@ jobs:
           name: rusteams-website-${{ needs.ci.outputs.version }}
           path: dist
 
-      - name: Validate R2 endpoint
+      - name: Validate R2 configuration
         run: |
-          ENDPOINT="${{ vars.CLOUDFLARE_R2_ENDPOINT_S3_CLIENT }}"
-          if [ -z "$ENDPOINT" ]; then
-            echo "::error::CLOUDFLARE_R2_ENDPOINT_S3_CLIENT repo variable is not set"
-            exit 1
-          fi
-          case "$ENDPOINT" in
-            https://*) echo "R2 endpoint OK: $ENDPOINT" ;;
-            *) echo "::error::CLOUDFLARE_R2_ENDPOINT_S3_CLIENT must start with https:// (got: $ENDPOINT)"; exit 1 ;;
+          missing=0
+          for var in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY R2_ENDPOINT R2_BUCKET; do
+            if [ -z "${!var}" ]; then
+              echo "::error::$var is not set (Settings > Secrets and variables > Actions)"
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ]
+          case "$R2_ENDPOINT" in
+            https://*) echo "R2 endpoint OK" ;;
+            *) echo "::error::CLOUDFLARE_R2_ENDPOINT_S3_CLIENT must start with https:// (got: $R2_ENDPOINT)"; exit 1 ;;
+          esac
+          case "$R2_PREFIX" in
+            /*/) ;;
+            *) echo "::error::R2_PREFIX must look like /<slug>/ (got: '$R2_PREFIX')"; exit 1 ;;
           esac
 
       - name: Ensure AWS CLI
@@ -142,20 +167,16 @@ jobs:
           fi
           aws --version
 
-      - name: Sync static site to Cloudflare R2
-        env:
-          AWS_ACCESS_KEY_ID: ${{ vars.CLOUDFLARE_R2_ACCOUNT_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_ACCOUNT_SECRET }}
-          AWS_DEFAULT_REGION: auto
-          AWS_EC2_METADATA_DISABLED: "true"
+      - name: Sync static site to docs-hub prefix
         run: |
-          ENDPOINT="${{ vars.CLOUDFLARE_R2_ENDPOINT_S3_CLIENT }}"
-          BUCKET="${{ vars.CLOUDFLARE_R2_BUCKET_ID }}"
-          aws s3 sync dist/ "s3://${BUCKET}" \
-            --endpoint-url "${ENDPOINT}" \
+          # Prefix-scoped deploy into the shared docs-hub bucket (ADR 0001).
+          # NEVER sync with --delete on the bucket root — that would wipe
+          # the other apps' prefixes and the landing.
+          aws s3 sync dist/ "s3://${R2_BUCKET}${R2_PREFIX}" \
+            --endpoint-url "${R2_ENDPOINT}" \
             --delete \
             --cache-control "public, max-age=31536000, immutable"
-          aws s3 cp dist/index.html "s3://${BUCKET}/index.html" \
-            --endpoint-url "${ENDPOINT}" \
+          aws s3 cp dist/index.html "s3://${R2_BUCKET}${R2_PREFIX}index.html" \
+            --endpoint-url "${R2_ENDPOINT}" \
             --cache-control "no-cache" \
             --content-type "text/html"

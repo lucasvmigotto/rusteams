@@ -16,6 +16,10 @@ if (!match?.[1]) {
 const RUSTEAMS_VERSION: string = match[1];
 
 export default defineConfig({
+  // Deployed under the docs-hub prefix /<repo>/ (ADR 0001 in lucas/docs).
+  // CI sets VITE_BASE_PATH from github.event.repository.name; the local
+  // default keeps `vite preview` at the same path as production.
+  base: process.env["VITE_BASE_PATH"] ?? "/rusteams/",
   plugins: [tailwindcss(), react()],
   resolve: {
     alias: {
