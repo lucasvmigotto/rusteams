@@ -5,6 +5,12 @@ is SemVer with `MVP ≠ 1.0.0`.
 
 ## [Unreleased]
 
+### Security
+- `rustls` 0.23.45 → 0.23.46 for RUSTSEC-2026-0346 (TLS secrets in `Debug`
+  output), RUSTSEC-2026-0347 (data sent after ECH rejection),
+  RUSTSEC-2026-0348 (Brotli certificate decompression memory) and
+  RUSTSEC-2026-0349 (ServerHello key-exchange downgrade).
+
 ### Fixed
 - Docs footer names both versions, `rusteams@vX.Y.Z · docs@vX.Y.Z` (Cargo.toml
   and `docs/site/package.json`), each linked to the repository tree at the
