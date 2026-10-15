@@ -5,6 +5,8 @@ is SemVer with `MVP ≠ 1.0.0`.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-15
+
 ### Security
 - `rustls` 0.23.45 → 0.23.46 for RUSTSEC-2026-0346 (TLS secrets in `Debug`
   output), RUSTSEC-2026-0347 (data sent after ECH rejection),
