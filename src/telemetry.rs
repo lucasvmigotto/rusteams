@@ -1,11 +1,13 @@
 use tracing_subscriber::{EnvFilter, fmt};
 
 /// Initialize structured logging with secret-safe defaults.
-/// Reads `RUST_LOG` (default: `rusteams=info`).
+/// Reads `RUST_LOG` (default: `rusteams=info`). Logs go to stderr: stdout is
+/// the command's output (`--json` must stay parseable) and, later, the TUI.
 pub fn init() {
     let filter =
         EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("rusteams=info"));
-    let _ = fmt().with_env_filter(filter).with_target(false).try_init();
+    let _ =
+        fmt().with_env_filter(filter).with_target(false).with_writer(std::io::stderr).try_init();
 }
 
 /// Redact `Authorization` header values and bearer tokens from a log line.

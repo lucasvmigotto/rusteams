@@ -109,6 +109,74 @@ impl AppConfig {
     pub fn default_path() -> Option<std::path::PathBuf> {
         dirs::config_dir().map(|d| d.join("rusteams").join("config.toml"))
     }
+
+    /// The config file in use: `RUSTEAMS_CONFIG` when set, else [`Self::default_path`].
+    pub fn path(get: &dyn Fn(&str) -> Option<String>) -> Option<std::path::PathBuf> {
+        match get(CONFIG_ENV) {
+            Some(p) if !p.is_empty() => Some(std::path::PathBuf::from(p)),
+            _ => Self::default_path(),
+        }
+    }
+
+    /// The layered configuration: defaults, then the TOML file at `path` (when
+    /// it exists), then `RUSTEAMS_*` environment, then explicit overrides.
+    pub fn load(
+        path: Option<&std::path::Path>,
+        get: &dyn Fn(&str) -> Option<String>,
+        overrides: CliOverrides,
+    ) -> Result<Self, AppError> {
+        let base = match path {
+            Some(p) if p.exists() => {
+                let text = std::fs::read_to_string(p)
+                    .map_err(|e| AppError::Config(format!("cannot read {}: {e}", p.display())))?;
+                Self::from_toml_str(&text)
+                    .map_err(|e| AppError::Config(format!("{}: {e}", p.display())))?
+            }
+            _ => Self::default(),
+        };
+        Ok(base.with_env(get).with_cli_overrides(overrides))
+    }
+}
+
+/// Environment variable naming an alternative config file.
+pub const CONFIG_ENV: &str = "RUSTEAMS_CONFIG";
+
+/// The commented starting point `rusteams config init` writes. Every setting
+/// is present and commented out, so the file changes nothing until edited.
+pub const CONFIG_TEMPLATE: &str = r#"# rusteams configuration — non-secret settings only. The refresh token lives
+# in the OS keyring, never here.
+#
+# Precedence: this file < RUSTEAMS_* environment variables < command-line flags.
+# Uncomment a setting to change it; the values shown are the defaults.
+
+# Your Entra public-client app (client) ID. Required for `rusteams login`;
+# see docs/development/entra-setup.md to register one.
+# client_id = "00000000-0000-0000-0000-000000000000"
+
+# Tenant ID, or "organizations" for any work or school account.
+# tenant_id = "organizations"
+
+# Entra authority and Graph base URL (change only for national clouds).
+# entra_authority = "https://login.microsoftonline.com"
+# graph_base_url = "https://graph.microsoft.com/v1.0"
+
+# How often the active chat is refreshed, in seconds (minimum 1).
+# poll_interval_secs = 15
+"#;
+
+/// Write [`CONFIG_TEMPLATE`] to `path`, creating its directory. Never
+/// overwrites: returns `Ok(false)` when the file already exists.
+pub fn write_template(path: &std::path::Path) -> Result<bool, AppError> {
+    if path.exists() {
+        return Ok(false);
+    }
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir)
+            .map_err(|e| AppError::Config(format!("cannot create {}: {e}", dir.display())))?;
+    }
+    std::fs::write(path, CONFIG_TEMPLATE)
+        .map_err(|e| AppError::Config(format!("cannot write {}: {e}", path.display())))?;
+    Ok(true)
 }
 
 /// Highest-precedence overrides, typically from CLI flags.
@@ -173,6 +241,65 @@ mod tests {
     fn poll_interval_is_clamped_to_minimum_one() {
         let c = AppConfig::from_toml_str("poll_interval_secs = 0").unwrap();
         assert_eq!(c.poll_interval_secs, 1);
+    }
+
+    #[test]
+    fn template_parses_to_the_defaults() {
+        assert_eq!(AppConfig::from_toml_str(CONFIG_TEMPLATE).unwrap(), AppConfig::default());
+    }
+
+    #[test]
+    fn load_layers_file_then_env_then_flags() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(&path, "tenant_id = \"file-tenant\"\npoll_interval_secs = 30\n").unwrap();
+        let no_env = |_: &str| None;
+        let from_file = AppConfig::load(Some(&path), &no_env, CliOverrides::default()).unwrap();
+        assert_eq!(from_file.tenant_id, "file-tenant");
+        assert_eq!(from_file.poll_interval_secs, 30);
+
+        let mut m = HashMap::new();
+        m.insert("RUSTEAMS_TENANT_ID".to_string(), "env-tenant".to_string());
+        let with_env = AppConfig::load(Some(&path), &env(m), CliOverrides::default()).unwrap();
+        assert_eq!(with_env.tenant_id, "env-tenant");
+
+        let flags = CliOverrides { tenant_id: Some("flag-tenant".into()), ..Default::default() };
+        assert_eq!(AppConfig::load(Some(&path), &no_env, flags).unwrap().tenant_id, "flag-tenant");
+    }
+
+    #[test]
+    fn load_without_a_file_is_the_defaults_and_a_bad_file_names_itself() {
+        let dir = tempfile::tempdir().unwrap();
+        let missing = dir.path().join("none.toml");
+        let no_env = |_: &str| None;
+        assert_eq!(
+            AppConfig::load(Some(&missing), &no_env, CliOverrides::default()).unwrap(),
+            AppConfig::default()
+        );
+        let bad = dir.path().join("bad.toml");
+        std::fs::write(&bad, "[[[broken").unwrap();
+        let err = AppConfig::load(Some(&bad), &no_env, CliOverrides::default()).unwrap_err();
+        assert!(err.to_string().contains("bad.toml"), "error names the file: {err}");
+    }
+
+    #[test]
+    fn config_path_honours_the_override() {
+        let mut m = HashMap::new();
+        m.insert(CONFIG_ENV.to_string(), "/tmp/x/rusteams.toml".to_string());
+        assert_eq!(
+            AppConfig::path(&env(m)),
+            Some(std::path::PathBuf::from("/tmp/x/rusteams.toml"))
+        );
+    }
+
+    #[test]
+    fn write_template_never_overwrites() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("nested").join("config.toml");
+        assert!(write_template(&path).unwrap());
+        std::fs::write(&path, "tenant_id = \"mine\"\n").unwrap();
+        assert!(!write_template(&path).unwrap());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "tenant_id = \"mine\"\n");
     }
 
     #[test]
