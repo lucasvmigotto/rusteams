@@ -41,6 +41,13 @@ jobs:
         with:
           fetch-depth: 0 # git describe --tags: the footer's versions and links
 
+      # vitest runs under Node: jsdom 30 needs Node ^22.22, so don't rely on
+      # the runner image's default.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
