@@ -31,15 +31,17 @@
 - Bound keyboard map (`j/k`, Emacs aliases, palette, quit) with scripted-loop
   harness — live terminal feed lands with the runtime loop
 - Live event loop (`run_live`): crossterm feed, action fold, re-render, restore
-  on every exit — needs a real TTY, verified manually
+  on every exit — needs a real TTY, verified manually; the `rusteams` command
+  does not launch it yet
 - Polling sync engine (sweeper, due-gated `SyncLoop` tick, supervised backoff
   loop, reconnect re-baselining, chaos-drilled) — near-real-time only; this
   client never claims push latency
 
 ## What does NOT work yet
 
-Live chat listing, message send/receive, TUI, realtime polling. Anything claiming
-otherwise is a bug — see `docs/phases-*.md` for the roadmap.
+Live chat listing, message send/receive, TUI, realtime polling against a real
+tenant. Anything claiming otherwise is a bug — `CHANGELOG.md` records what has
+landed.
 
 ## Prerequisites
 
@@ -54,13 +56,29 @@ docker exec -w /workspaces/rusteams rusteams cargo test
 docker exec -w /workspaces/rusteams rusteams cargo run -- config
 ```
 
-The interactive TUI runtime is under construction: terminal acquire/restore,
-view assembly, and key folding exist and are tested, but the live event loop
-is not wired yet — `rusteams` without a subcommand still prints guidance.
+The interactive TUI is not reachable yet: terminal acquire/restore, view
+assembly, key folding and the live event loop (`run_live`) exist and are
+tested, but `rusteams` without a subcommand still prints guidance instead of
+launching it.
+
+## Configuration
+
+Non-secret settings come from three layers, each overriding the one before:
+the config file, `RUSTEAMS_*` environment variables, then command-line flags
+(`--tenant-id`). The refresh token is never in the file; it lives in the OS
+keyring.
+
+```bash
+rusteams config init     # write a commented config file (never overwrites)
+rusteams config --path   # where it lives: $XDG_CONFIG_HOME/rusteams/config.toml,
+                         # or RUSTEAMS_CONFIG when set
+rusteams config          # the resolved settings (client ID only as set/unset)
+rusteams status --json   # also: config --json, doctor --json — stable keys,
+                         # never secrets, for scripts
+```
 
 ## Documentation
 
-- `docs/phases-0.md` … `docs/phases-7.md` — roadmap (Phase 0 detailed, later phases strategic)
 - `docs/development/live-verification.md` — manual TTY/tenant/screen-reader runbooks
 - `docs/architecture/` — ADRs
 - `docs/security/` — threat model, auth, terminal security
