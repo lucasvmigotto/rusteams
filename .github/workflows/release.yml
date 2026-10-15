@@ -216,5 +216,8 @@ jobs:
       - name: Create and push tag on the built commit
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          # An annotated tag records a tagger; the runner has no git identity.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898496+github-actions[bot]@users.noreply.github.com"
           git tag -a "$VERSION" -m "rusteams $VERSION" "${{ github.sha }}"
           git push origin "refs/tags/$VERSION"
