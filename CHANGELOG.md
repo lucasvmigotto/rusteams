@@ -5,6 +5,22 @@ is SemVer with `MVP ≠ 1.0.0`.
 
 ## [Unreleased]
 
+### Added
+- `rusteams config init` writes a commented config file (never overwrites);
+  `rusteams config --path` prints where it lives (`RUSTEAMS_CONFIG` overrides).
+- `--json` on `status`, `config` and `doctor`: stable keys, never secrets.
+
+### Fixed
+- The config file is read: settings layer file < `RUSTEAMS_*` env < flags, as
+  designed. Before, only the environment applied.
+- `--tenant-id` takes effect (it was parsed but ignored).
+- Logs go to stderr, so stdout carries only the command's output (`--json`
+  stays parseable).
+- The missing-client-ID error no longer suggests a `--client-id` flag that
+  does not exist.
+- README: no links to roadmap files that do not exist, and the TUI's state
+  stated once, consistently.
+
 ## [0.3.0] — 2026-10-15
 
 ### Security

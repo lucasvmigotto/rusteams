@@ -45,7 +45,9 @@ session fails closed and points back to `rusteams login`.
 
 ## 4. Troubleshooting
 
-- `client-id is not set` → export `RUSTEAMS_CLIENT_ID` first.
+- `client-id is not set` → export `RUSTEAMS_CLIENT_ID` first, or set
+  `client_id` in the config file (`rusteams config init` writes one;
+  `rusteams config --path` shows where).
 - `authentication failed` during polling → code expired (>15 min), declined, or
   tenant blocks device flow; re-run `login`.
 - Conditional Access / MFA is handled in the browser step, not in the TUI.
