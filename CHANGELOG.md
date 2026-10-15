@@ -5,6 +5,8 @@ is SemVer with `MVP ≠ 1.0.0`.
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-15
+
 ### Added
 - `rusteams config init` writes a commented config file (never overwrites);
   `rusteams config --path` prints where it lives (`RUSTEAMS_CONFIG` overrides).
