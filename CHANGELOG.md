@@ -5,6 +5,12 @@ is SemVer with `MVP ≠ 1.0.0`.
 
 ## [Unreleased]
 
+### Fixed
+- Docs footer names both versions, `rusteams@vX.Y.Z · docs@vX.Y.Z` (Cargo.toml
+  and `docs/site/package.json`), each linked to the repository tree at the
+  release tag (or the commit when untagged); the website redeploys after the
+  release workflow tags, so it shows the tagged version.
+
 ### Added
 - HTTPS trust: built-in WebPKI roots plus optional `RUSTEAMS_CA_BUNDLE` PEM
   bundle (fails closed on unreadable/invalid files, paths only in errors).
