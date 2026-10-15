@@ -88,7 +88,7 @@ export RUSTEAMS_TOKEN_FILE="$E2E/.sim-tokens.json"
 rm -f "$RUSTEAMS_TOKEN_FILE"
 
 echo "== CLI assertions =="
-expect_grep "version matches Cargo.toml" "rusteams 0.2.0" "$BIN" version
+expect_grep "version matches Cargo.toml" "rusteams $(bash "$ROOT/scripts/ci/extract-version.sh")" "$BIN" version
 expect_grep "status logged out" "logged_in: false" "$BIN" status
 expect_grep "config shows sim tenant" "sim-tenant" "$BIN" config
 expect_grep "doctor prints config path" "doctor: config file" "$BIN" doctor
