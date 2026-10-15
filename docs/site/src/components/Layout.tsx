@@ -5,7 +5,7 @@ import { LOCALES } from "../i18n/locales";
 import { useLocale } from "../i18n/useLocale";
 import type { SearchEntry } from "./Search";
 import { Search } from "./Search";
-import { cx, SkipLink, VersionBadge } from "./ui";
+import { cx, SkipLink } from "./ui";
 
 const DESKTOP_LINKS = [
   { to: "/", labelKey: "nav.overview", end: true },
@@ -134,7 +134,21 @@ function Footer() {
   return (
     <footer className="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
       <p>
-        {t("footer.docsFor")} rusteams <VersionBadge version={__RUSTEAMS_VERSION__} />
+        {t("footer.docsFor")} rusteams{" "}
+        <span title="Versions" className="font-mono">
+          {__VERSIONS__.map((v, i) => (
+            <span key={v.name}>
+              {i > 0 && " · "}
+              {v.href ? (
+                <a className="underline hover:text-slate-300" href={v.href}>
+                  {v.label}
+                </a>
+              ) : (
+                v.label
+              )}
+            </span>
+          ))}
+        </span>
       </p>
       <p className="mt-2 flex items-center justify-center gap-4">
         <a

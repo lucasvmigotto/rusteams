@@ -277,11 +277,3 @@ export function Breadcrumbs({ trail }: { trail: { label: string; to?: string }[]
     </nav>
   );
 }
-
-export function VersionBadge({ version }: { version: string }) {
-  return (
-    <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs text-sky-200">
-      v{version}
-    </span>
-  );
-}

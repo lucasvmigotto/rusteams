@@ -81,9 +81,13 @@ describe("site chrome and navigation", () => {
     expect(screen.queryByPlaceholderText("Search…")).not.toBeInTheDocument();
   });
 
-  it("footer carries version, GitHub, and license links", () => {
+  it("footer carries the linked versions, GitHub, and license links", () => {
     renderLayout();
-    expect(screen.getByText("0.0.0-test", { exact: false })).toBeInTheDocument();
+    expect(screen.getByTitle("Versions")).toHaveTextContent("rusteams@v0.2.0 · docs@v0.2.0");
+    expect(screen.getByRole("link", { name: "rusteams@v0.2.0" })).toHaveAttribute(
+      "href",
+      "https://github.com/lucasvmigotto/rusteams/tree/0.2.0",
+    );
     expect(screen.getByRole("link", { name: "GitHub" })).toHaveAttribute(
       "href",
       "https://github.com/lucasvmigotto/rusteams",
